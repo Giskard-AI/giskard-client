@@ -160,8 +160,7 @@ class ModelInspector:
         return compressed_pickle
 
     def upload_model(
-        self, client: APIClient, project_key: str = "my-project", model_name: str = "my-model",
-        binary_threshold=None
+        self, client: APIClient, project_key: str = "my-project", model_name: str = "my-model"
     ) -> requests.Response:
         project_key = self.transmogrify(project_key)
         logging.info(f"Uploading model '{model_name}' to project '{project_key}'...")
@@ -173,7 +172,6 @@ class ModelInspector:
             params={
                 "project_key": project_key,
                 "model_name": model_name,
-                "binary_threshold": binary_threshold,
                 "python_version": get_python_version(),
             },
         )
@@ -204,7 +202,6 @@ class ModelInspector:
         api_token: str,
         target_column: Optional[str] = None,
         model_name: str = "my-model",
-        binary_threshold=None,
         dataset_name: str = "my-dataset",
         project_key: str = "my-project",
     ) -> Tuple[str, str]:
@@ -216,7 +213,7 @@ class ModelInspector:
             if not project_key:
                 raise ValueError("Please choose a project key")
             client = Client(url=url, token=api_token)
-            model_upload_response = self.upload_model(client, project_key, model_name, binary_threshold)
+            model_upload_response = self.upload_model(client, project_key, model_name)
             model_upload_response_dict = model_upload_response.json()
             df_upload_response = self.upload_df(client, df, project_key, dataset_name)
             df_upload_response_dict = df_upload_response.json()
