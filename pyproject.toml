@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "giskard-client"
-version = "0.2.0"
+version = "0.1.2"
 description = "Inspect your AI models visually, find bugs, give feedback 🕵️‍♀️ 💬"
 readme = "README.md"
 authors = ["Giskard AI <hello@giskard.ai>"]
