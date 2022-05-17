@@ -1,6 +1,7 @@
 """API Client to interact with the Giskard app"""
-
-from typing import Dict
+import json
+from io import BytesIO, StringIO
+from typing import Dict, Union
 
 from apiclient import APIClient
 from apiclient.authentication_methods import HeaderAuthentication
@@ -12,12 +13,20 @@ class Client(APIClient):
         super().__init__(authentication_method=HeaderAuthentication(token=token))
         self.url = url
 
-    def upload_model(self, model: bytes, requirements: str, params: Dict[str, str]) -> Response:
-        endpoint = self.url + "/api/v1/third-party/models/upload"
-        files = {"model": model, "requirements": requirements}
-        return self.post(endpoint=endpoint, data={}, params=params, files=files)
+    def upload_model(self, model: bytes, requirements: Union[bytes, StringIO, BytesIO],
+                     params: Dict[str, str]) -> Response:
+        endpoint = self.url + f"/api/v2/project/models/upload"
+        files = [
+            ('metadata', (None, json.dumps(params), 'application/json')),
+            ('modelFile', model),
+            ('requirementsFile', requirements)
+        ]
+        return self.post(endpoint=endpoint, data={}, files=files)
 
-    def upload_data(self, data: bytes, params: Dict[str, str]) -> Response:
-        endpoint = self.url + "/api/v1/third-party/data/upload"
-        files = {"data_file": data}
-        return self.post(endpoint=endpoint, data={}, params=params, files=files)
+    def upload_data(self, data: Union[bytes, StringIO, BytesIO], params: Dict[str, str]) -> Response:
+        endpoint = self.url + "/api/v2/project/data/upload"
+        files = [
+            ('metadata', (None, json.dumps(params), 'application/json')),
+            ('file', data)
+        ]
+        return self.post(endpoint=endpoint, data={}, files=files)

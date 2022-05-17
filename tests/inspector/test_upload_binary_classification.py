@@ -18,12 +18,12 @@ def test_upload_binary_classification():
         input_types={"Age": "numeric", "Sex": "category", "Embarked": "category"},
         classification_labels=["dead", "alive"],
     )
-    model_upload_response = inspector.upload_model(
+    model_upload_response = inspector._upload_model(
         client, project_key="titanicé", model_name="titanic_v1"
     )
     print(model_upload_response.json())
     assert model_upload_response.status_code == 200
-    df_upload_response = inspector.upload_df(
+    df_upload_response = inspector._upload_df(
         client, df, project_key="titanicé", dataset_name="titanic_test"
     )
     print(df_upload_response.json())

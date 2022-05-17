@@ -1,17 +1,15 @@
 """Inspect Machine Learning models"""
 
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
-
 import logging
 import re
 from enum import Enum
 from io import StringIO
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 from urllib.parse import quote_plus, urlencode
 
 import numpy as np
 import pandas as pd
 import requests
-from apiclient import APIClient
 from IPython.display import HTML, display
 from ipywidgets import widgets
 
@@ -33,15 +31,15 @@ class SupportedColumnType(Enum):
 
 class ModelInspector:
     def __init__(
-        self,
-        prediction_function: Callable[
-            [pd.DataFrame],
-            Iterable[Union[str, float, int]],
-        ],
-        prediction_task: str,
-        input_types: Dict[str, str],
-        classification_threshold: Optional[float] = 0.5,
-        classification_labels: Optional[List[str]] = None,
+            self,
+            prediction_function: Callable[
+                [pd.DataFrame],
+                Iterable[Union[str, float, int]],
+            ],
+            prediction_task: str,
+            input_types: Dict[str, str],
+            classification_threshold: Optional[float] = 0.5,
+            classification_labels: Optional[List[str]] = None,
     ):
         if prediction_task in {task.value for task in SupportedPredictionTask}:
             self.prediction_task = prediction_task
@@ -78,9 +76,9 @@ class ModelInspector:
             )
         if prediction_task == SupportedPredictionTask.CLASSIFICATION.value:
             if (
-                classification_labels is not None
-                and hasattr(classification_labels, "__iter__")
-                and not isinstance(classification_labels, (str, dict))  # type: ignore
+                    classification_labels is not None
+                    and hasattr(classification_labels, "__iter__")
+                    and not isinstance(classification_labels, (str, dict))  # type: ignore
             ):
                 if len(classification_labels) > 1:
                     self.classification_labels: Optional[List[str]] = [
@@ -124,8 +122,8 @@ class ModelInspector:
             pandas_inferred_input_types = df.dtypes.to_dict()
             for column, dtype in pandas_inferred_input_types.items():
                 if (
-                    self.input_types.get(column) == SupportedColumnType.NUMERIC.value
-                    and dtype == "object"
+                        self.input_types.get(column) == SupportedColumnType.NUMERIC.value
+                        and dtype == "object"
                 ):
                     df[column] = df[column].astype(float)
             return df
@@ -159,8 +157,25 @@ class ModelInspector:
         compressed_pickle: bytes = compress(pickle_dumps(self))
         return compressed_pickle
 
+    def get_prediction_task_for_upload(self):
+        if self.prediction_task == SupportedPredictionTask.CLASSIFICATION.value:
+            if len(self.classification_labels) < 3:
+                return "BINARY_CLASSIFICATION"
+            else:
+                return "MULTICLASS_CLASSIFICATION"
+        elif self.prediction_task == SupportedPredictionTask.REGRESSION.value:
+            return "REGRESSION"
+        else:
+            raise RuntimeError("Unreachable")
+
     def upload_model(
-        self, client: APIClient, project_key: str = "my-project", model_name: str = "my-model"
+            self, url: str, api_token: str, target_column, project_key: str = "my-project", model_name: str = "my-model"
+    ) -> requests.Response:
+        client = Client(url, api_token)
+        return self._upload_model(client, target_column, project_key, model_name)
+
+    def _upload_model(
+            self, client: Client, target_column, project_key: str = "my-project", model_name: str = "my-model"
     ) -> requests.Response:
         project_key = self.transmogrify(project_key)
         logging.info(f"Uploading model '{model_name}' to project '{project_key}'...")
@@ -169,41 +184,29 @@ class ModelInspector:
         response: requests.Response = client.upload_model(
             model=model,
             requirements=StringIO(requirements),
-            params={
-                "project_key": project_key,
-                "model_name": model_name,
-                "python_version": get_python_version(),
-            },
+            params=
+            {"name": model_name,
+             "projectKey": project_key,
+             "languageVersion": get_python_version(),
+             "modelType": self.get_prediction_task_for_upload(),
+             "threshold": self.classification_threshold,
+             "features": self.input_types,
+             "target": target_column,
+             "language": "PYTHON",
+             "classificationLabels": self.classification_labels}
         )
         logging.info(f"Uploading model '{model_name}' to project '{project_key}': Done!")
         return response
 
-    def upload_df(
-        self,
-        client: APIClient,
-        df: pd.DataFrame,
-        project_key: str = "my-project",
-        dataset_name: str = "my-dataset",
-    ) -> requests.Response:
-        project_key = self.transmogrify(project_key)
-        df = self._validate_df(df)
-        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}'...")
-        response: requests.Response = client.upload_data(
-            data=compress(save_df(df)),
-            params={"project_key": project_key, "dataset_name": f"{dataset_name}.csv.zst"},
-        )
-        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}': Done!")
-        return response
-
     def upload_model_and_df(
-        self,
-        df: pd.DataFrame,
-        url: str,
-        api_token: str,
-        target_column: Optional[str] = None,
-        model_name: str = "my-model",
-        dataset_name: str = "my-dataset",
-        project_key: str = "my-project",
+            self,
+            df: pd.DataFrame,
+            url: str,
+            api_token: str,
+            target_column: Optional[str] = None,
+            model_name: str = "my-model",
+            dataset_name: str = "my-dataset",
+            project_key: str = "my-project",
     ) -> Tuple[str, str]:
         try:
             if not api_token:
@@ -213,9 +216,9 @@ class ModelInspector:
             if not project_key:
                 raise ValueError("Please choose a project key")
             client = Client(url=url, token=api_token)
-            model_upload_response = self.upload_model(client, project_key, model_name)
+            model_upload_response = self._upload_model(client, target_column, project_key, model_name)
             model_upload_response_dict = model_upload_response.json()
-            df_upload_response = self.upload_df(client, df, project_key, dataset_name)
+            df_upload_response = self._upload_df(client, df, project_key, dataset_name)
             df_upload_response_dict = df_upload_response.json()
             payload = {
                 "mid": str(model_upload_response_dict["id"]),
@@ -223,12 +226,39 @@ class ModelInspector:
             }
             if target_column:
                 payload["tgt"] = str(target_column)
-            project_id = model_upload_response_dict["project_id"]
+            project_id = model_upload_response_dict["projectId"]
             result = urlencode(payload, quote_via=quote_plus)  # type: ignore
             inspection_url = f"{url}/main/projects/{project_id}/inspect?{result}"
             return ("OK", f"""<a href="{inspection_url}">Open in browser</a>""")
         except Exception as error:
             return ("NOK", str(error))
+
+    def upload_df(
+            self,
+            url: str, api_token: str,
+            df: pd.DataFrame,
+            project_key: str = "my-project",
+            dataset_name: str = "my-dataset",
+    ) -> requests.Response:
+        client = Client(url=url, token=api_token)
+        return self._upload_df(client, df, project_key, dataset_name)
+
+    def _upload_df(
+            self,
+            client: Client,
+            df: pd.DataFrame,
+            project_key: str = "my-project",
+            dataset_name: str = "my-dataset",
+    ) -> requests.Response:
+        project_key = self.transmogrify(project_key)
+        df = self._validate_df(df)
+        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}'...")
+        response: requests.Response = client.upload_data(
+            data=compress(save_df(df)),
+            params={"projectKey": project_key, "name": dataset_name},
+        )
+        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}': Done!")
+        return response
 
     def _generate_inspector_widget(self, df: pd.DataFrame) -> None:
         title = widgets.HTML(value="<h2>Inspect your model</h2>")

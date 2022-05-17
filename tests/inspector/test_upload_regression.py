@@ -20,12 +20,12 @@ def test_upload_regression():
             **{column: "category" for column in categorical_columns},
         },
     )
-    model_upload_response = inspector.upload_model(
+    model_upload_response = inspector._upload_model(
         client, project_key="house-prices", model_name="house-prices-v2"
     )
     print(model_upload_response.json())
     assert model_upload_response.status_code == 200
-    df_upload_response = inspector.upload_df(
+    df_upload_response = inspector._upload_df(
         client, df_test, project_key="house-prices", dataset_name="british-house"
     )
     print(df_upload_response.json())

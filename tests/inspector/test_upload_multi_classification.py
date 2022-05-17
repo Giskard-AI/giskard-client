@@ -18,12 +18,12 @@ def test_upload_multi_classification():
         input_types={"Age": "numeric", "Sex": "category", "Embarked": "category"},
         classification_labels=["dead", "alive", "zombie"],
     )
-    model_upload_response = inspector.upload_model(
+    model_upload_response = inspector._upload_model(
         client, project_key="titanic-zombie", model_name="model_v1"
     )
     print(model_upload_response.json())
     assert model_upload_response.status_code == 200
-    df_upload_response = inspector.upload_df(
+    df_upload_response = inspector._upload_df(
         client, df, project_key="titanic-zombie", dataset_name="zombie_jack"
     )
     print(df_upload_response.json())
