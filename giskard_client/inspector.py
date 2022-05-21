@@ -1,5 +1,5 @@
 """Inspect Machine Learning models"""
-
+import datetime
 import logging
 import re
 from enum import Enum
@@ -157,25 +157,18 @@ class ModelInspector:
         compressed_pickle: bytes = compress(pickle_dumps(self))
         return compressed_pickle
 
-    def get_prediction_task_for_upload(self):
-        if self.prediction_task == SupportedPredictionTask.CLASSIFICATION.value:
-            if len(self.classification_labels) < 3:
-                return "BINARY_CLASSIFICATION"
-            else:
-                return "MULTICLASS_CLASSIFICATION"
-        elif self.prediction_task == SupportedPredictionTask.REGRESSION.value:
-            return "REGRESSION"
-        else:
-            raise RuntimeError("Unreachable")
-
     def upload_model(
-            self, url: str, api_token: str, target_column, project_key: str = "my-project", model_name: str = "my-model"
+            self, url: str,
+            api_token: str,
+            feature_names: List[str],
+            project_key: str = None,
+            model_name: str = None
     ) -> requests.Response:
         client = Client(url, api_token)
-        return self._upload_model(client, target_column, project_key, model_name)
+        return self._upload_model(client, project_key, feature_names, model_name)
 
     def _upload_model(
-            self, client: Client, target_column, project_key: str = "my-project", model_name: str = "my-model"
+            self, client: Client, project_key: str, feature_names: List[str] = None, model_name: str = None,
     ) -> requests.Response:
         project_key = self.transmogrify(project_key)
         logging.info(f"Uploading model '{model_name}' to project '{project_key}'...")
@@ -184,16 +177,16 @@ class ModelInspector:
         response: requests.Response = client.upload_model(
             model=model,
             requirements=StringIO(requirements),
-            params=
-            {"name": model_name,
-             "projectKey": project_key,
-             "languageVersion": get_python_version(),
-             "modelType": self.get_prediction_task_for_upload(),
-             "threshold": self.classification_threshold,
-             "features": self.input_types,
-             "target": target_column,
-             "language": "PYTHON",
-             "classificationLabels": self.classification_labels}
+            params={
+                "name": model_name,
+                "projectKey": project_key,
+                "languageVersion": get_python_version(),
+                "modelType": self.prediction_task,
+                "threshold": self.classification_threshold,
+                "featureNames": feature_names,
+                "language": "PYTHON",
+                "classificationLabels": self.classification_labels
+            }
         )
         logging.info(f"Uploading model '{model_name}' to project '{project_key}': Done!")
         return response
@@ -235,29 +228,40 @@ class ModelInspector:
 
     def upload_df(
             self,
-            url: str, api_token: str,
+            url: str,
+            api_token: str,
+            project_key: str,
             df: pd.DataFrame,
-            project_key: str = "my-project",
-            dataset_name: str = "my-dataset",
+            feature_types: Dict[str, str],
+            name: str = None,
+            target: str = None,
     ) -> requests.Response:
         client = Client(url=url, token=api_token)
-        return self._upload_df(client, df, project_key, dataset_name)
+        return self._upload_df(client,
+                               project_key, name, df, feature_types, target)
 
     def _upload_df(
             self,
             client: Client,
+            project_key: str,
+            name: str,
             df: pd.DataFrame,
-            project_key: str = "my-project",
-            dataset_name: str = "my-dataset",
+            feature_types: Dict[str, str],
+            target: str,
     ) -> requests.Response:
         project_key = self.transmogrify(project_key)
         df = self._validate_df(df)
-        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}'...")
+        logging.info(f"Uploading dataset '{name}' to project '{project_key}'...")
         response: requests.Response = client.upload_data(
             data=compress(save_df(df)),
-            params={"projectKey": project_key, "name": dataset_name},
+            params={
+                "projectKey": project_key,
+                "name": name,
+                "featureTypes": feature_types,
+                "target": target
+            },
         )
-        logging.info(f"Uploading dataset '{dataset_name}' to project '{project_key}': Done!")
+        logging.info(f"Uploading dataset '{name}' to project '{project_key}': Done!")
         return response
 
     def _generate_inspector_widget(self, df: pd.DataFrame) -> None:

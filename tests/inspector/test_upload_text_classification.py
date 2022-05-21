@@ -24,7 +24,7 @@ def test_upload_text_classification():
     print(model_upload_response.json())
     assert model_upload_response.status_code == 200
     df_upload_response = inspector._upload_df(
-        client, df_test, project_key="newspaper", dataset_name="test_dataset"
+        client, df_test, project_key="newspaper", name="test_dataset"
     )
     print(df_upload_response.json())
     assert df_upload_response.status_code == 200
