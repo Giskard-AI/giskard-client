@@ -1,5 +1,4 @@
 """Inspect Machine Learning models"""
-import datetime
 import logging
 import re
 from enum import Enum
@@ -162,9 +161,12 @@ class ModelInspector:
             api_token: str,
             feature_names: List[str],
             project_key: str = None,
-            model_name: str = None
+            model_name: str = None,
+            validate_df: pd.DataFrame = None
     ) -> requests.Response:
         client = Client(url, api_token)
+        if validate_df and not self._validate_model(validate_df):
+            raise Exception("Model is not valid")
         return self._upload_model(client, project_key, feature_names, model_name)
 
     def _upload_model(
@@ -211,7 +213,7 @@ class ModelInspector:
             client = Client(url=url, token=api_token)
             model_upload_response = self._upload_model(client, target_column, project_key, model_name)
             model_upload_response_dict = model_upload_response.json()
-            df_upload_response = self._upload_df(client, df, project_key, dataset_name)
+            df_upload_response = self._upload_df(client, project_key, dataset_name, df, self.input_types, target_column)
             df_upload_response_dict = df_upload_response.json()
             payload = {
                 "mid": str(model_upload_response_dict["id"]),
@@ -232,13 +234,12 @@ class ModelInspector:
             api_token: str,
             project_key: str,
             df: pd.DataFrame,
-            feature_types: Dict[str, str],
             name: str = None,
             target: str = None,
     ) -> requests.Response:
         client = Client(url=url, token=api_token)
         return self._upload_df(client,
-                               project_key, name, df, feature_types, target)
+                               project_key, name, df, self.input_types, target)
 
     def _upload_df(
             self,
@@ -267,7 +268,6 @@ class ModelInspector:
     def _generate_inspector_widget(self, df: pd.DataFrame) -> None:
         title = widgets.HTML(value="<h2>Inspect your model</h2>")
         subtitle_input = widgets.HTML(value="<h3>Dataset settings</h3>")
-        # subtitle_model = widgets.HTML(value="<h3>Model settings</h3>")
         subtitle_auth = widgets.HTML(value="<h3>Authentication</h3>")
         overall_style = {"description_width": "120px"}
 
@@ -279,20 +279,6 @@ class ModelInspector:
             style=overall_style,
         )
 
-        # model_name_input = widgets.Text(
-        #     value="my-model",
-        #     placeholder="my-model",
-        #     description="Model name",
-        #     disabled=False,
-        #     style=overall_style,
-        # )
-        # dataset_name_input = widgets.Text(
-        #     value="my-dataset",
-        #     placeholder="my-dataset",
-        #     description="Dataset name",
-        #     disabled=False,
-        #     style=overall_style,
-        # )
         project_key_input = widgets.Text(
             value="",
             placeholder="choose-a-project-key",
@@ -323,15 +309,12 @@ class ModelInspector:
         )
         upload_button.style.button_color = "#00897B"
 
-        def on_button_clicked(button: widgets.Button) -> None:
-            (upload_result, upload_result_message) = ("NOK", "")
+        def on_button_clicked() -> None:
             with output_upload_results:
                 output_upload_results.clear_output()
                 print("Uploading...")
                 (upload_result, upload_result_message) = self.upload_model_and_df(
                     df=df,
-                    # model_name=model_name_input.value,
-                    # dataset_name=dataset_name_input.value,
                     project_key=project_key_input.value,
                     url=url_input.value,
                     api_token=api_token_input.value,
@@ -347,10 +330,7 @@ class ModelInspector:
                 [
                     title,
                     subtitle_input,
-                    # dataset_name_input,
                     target_column_input,
-                    # subtitle_model,
-                    # model_name_input,
                     subtitle_auth,
                     url_input,
                     project_key_input,
