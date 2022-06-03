@@ -2,7 +2,7 @@ from io import BytesIO, StringIO
 
 import pandas as pd
 
-from giskard_client.io_utils import compress, decompress, save_df
+from giskard.io_utils import compress, decompress, save_df
 
 
 def test_save_df_titanic():

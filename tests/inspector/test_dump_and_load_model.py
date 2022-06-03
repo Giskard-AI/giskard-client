@@ -8,8 +8,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.tree import DecisionTreeClassifier
 
-from giskard_client import ModelInspector
-from giskard_client.io_utils import decompress, pickle_loads
+from giskard import ModelInspector
+from giskard.io_utils import decompress, pickle_loads
 
 
 def test_dump_and_load_dummy_lambda_model():

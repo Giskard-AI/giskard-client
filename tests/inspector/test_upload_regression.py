@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from giskard_client import Client, ModelInspector
+from giskard import Client, ModelInspector
 
 from .create_regression import categorical_columns, df_test, numeric_columns, prediction_pipeline
 
