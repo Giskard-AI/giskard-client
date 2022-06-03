@@ -4,8 +4,8 @@ requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "giskard-client"
-version = "0.1.2"
+name = "giskard"
+version = "1.0.0"
 description = "Inspect your AI models visually, find bugs, give feedback 🕵️‍♀️ 💬"
 readme = "README.md"
 authors = ["Giskard AI <hello@giskard.ai>"]
@@ -15,58 +15,60 @@ homepage = "https://github.com/Giskard-AI/giskard-client"
 
 # Keywords description https://python-poetry.org/docs/pyproject/#keywords
 keywords = [
-  "Artificial Intelligence",
-  "Machine Learning",
-  "Quality",
-  "MLOps"
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Quality",
+    "MLOps"
 ]
 
 # Pypi classifiers: https://pypi.org/classifiers/
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Science/Research",
-  "Operating System :: OS Independent",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
-  "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.7",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 
 
 
 [tool.poetry.dependencies]
-python = ">=3.7.1,<3.8.0"
-importlib_metadata = {version = "^4.5.0", python = "<3.8"}
-pandas = ">=1.0.0 <2.0.0"
-numpy = ">=1.19.0 <2.0.0"
-scikit-learn = ">=0.22.0,<0.25.0"
-pydantic = ">=1.7.1,<1.9.0"
-typing-extensions = "^3.7.4"
-cloudpickle = ">=1.3.0,<1.7.0"
+python = ">=3.7.1,<4"
+importlib_metadata = { version = "^4.11.4" }
+pandas = ">=1.3.5"
+numpy = ">=1.21.1"
+scikit-learn = ">=1.0.2"
+pydantic = ">=1.9.1"
+typing-extensions = "^3.10.0.2"
+cloudpickle = ">=2.1.0"
 api-client = "^1.3.1"
 zstandard = "^0.15.2"
-python-dotenv = "^0.17.0"
+python-dotenv = "^0.17.1"
 jupyter-http-over-ws = "^0.0.8"
-ipywidgets = "^7.6.3"
-types-requests = "^2.25.8"
+ipywidgets = "^7.7.0"
+types-requests = "^2.27.30"
 
 [tool.poetry.dev-dependencies]
-darglint = "^1.8.0"
-isort = {extras = ["colors"], version = "^5.9.3"}
-pyupgrade = "^2.24.0"
-black = "^21.7b0"
+darglint = "^1.8.1"
+isort = { extras = ["colors"], version = "^5.10.1" }
+pyupgrade = "^2.32.1"
+black = "^21.12b0"
 mypy = "^0.910"
 mypy-extensions = "^0.4.3"
-bandit = "^1.7.0"
+bandit = "^1.7.4"
 safety = "^1.10.3"
-pytest = "^6.2.4"
-pylint = "^2.10.2"
+pytest = "^6.2.5"
+pylint = "^2.13.9"
 pydocstyle = "^6.1.1"
-pre-commit = "^2.14.0"
-flake8 = "^3.8.4"
+pre-commit = "^2.19.0"
+flake8 = "^3.9.2"
 jupyter = "^1.0.0"
-jupyterlab = "^3.0.14"
+jupyterlab = "^3.4.2"
 
 [tool.black]
 # https://github.com/psf/black
@@ -133,15 +135,15 @@ warn_unused_ignores = true
 [tool.pytest.ini_options]
 # https://docs.pytest.org/en/6.2.x/customize.html#pyproject-toml
 # Directories that are not visited by pytest collector:
-norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
+norecursedirs = ["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
 doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
 
 # Extra options:
 addopts = [
-  "--strict-markers",
-  "--tb=short",
-  "--doctest-modules",
-  "--doctest-continue-on-failure",
+    "--strict-markers",
+    "--tb=short",
+    "--doctest-modules",
+    "--doctest-continue-on-failure",
 ]
 
 [virtualenvs]
