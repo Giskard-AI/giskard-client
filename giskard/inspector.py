@@ -1,5 +1,4 @@
 """Inspect Machine Learning models"""
-import datetime
 import logging
 import re
 from enum import Enum
@@ -279,20 +278,6 @@ class ModelInspector:
             style=overall_style,
         )
 
-        # model_name_input = widgets.Text(
-        #     value="my-model",
-        #     placeholder="my-model",
-        #     description="Model name",
-        #     disabled=False,
-        #     style=overall_style,
-        # )
-        # dataset_name_input = widgets.Text(
-        #     value="my-dataset",
-        #     placeholder="my-dataset",
-        #     description="Dataset name",
-        #     disabled=False,
-        #     style=overall_style,
-        # )
         project_key_input = widgets.Text(
             value="",
             placeholder="choose-a-project-key",
@@ -323,7 +308,7 @@ class ModelInspector:
         )
         upload_button.style.button_color = "#00897B"
 
-        def on_button_clicked(button: widgets.Button) -> None:
+        def on_button_clicked() -> None:
             (upload_result, upload_result_message) = ("NOK", "")
             with output_upload_results:
                 output_upload_results.clear_output()
@@ -347,10 +332,7 @@ class ModelInspector:
                 [
                     title,
                     subtitle_input,
-                    # dataset_name_input,
                     target_column_input,
-                    # subtitle_model,
-                    # model_name_input,
                     subtitle_auth,
                     url_input,
                     project_key_input,
