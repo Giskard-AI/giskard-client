@@ -22,9 +22,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install poetry
           poetry install
+          poetry shell
       - name: Test with pytest
         run: |
-          python -m pytest --cov=giskard tests --cov-report=xml
+          pytest --cov=giskard tests --cov-report=xml
       - name: Build
         run: |
           poetry build
