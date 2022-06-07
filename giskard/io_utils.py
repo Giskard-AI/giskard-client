@@ -1,10 +1,8 @@
 """Various input/output utility functions"""
 
-from typing import Any, Optional
-
-import os
 import re
 from io import BytesIO
+from typing import Any, Optional
 
 import cloudpickle
 import pandas as pd
@@ -22,8 +20,12 @@ def pickle_loads(dumped_pickle: bytes) -> Any:
     return cloudpickle.loads(dumped_pickle)
 
 
+def load_decompress(serialized: bytes) -> Any:
+    return pickle_loads(decompress(serialized))
+
+
 def save_df(df: pd.DataFrame, format: str = "csv") -> bytes:
-    pandas_version: int = int(re.sub("[^0-9]", "", pd.__version__))
+    pandas_version: int = int(re.sub(r"\D", "", pd.__version__))
     if format == "csv":
         csv_buffer = BytesIO()
         if pandas_version >= 120:
@@ -52,7 +54,7 @@ def compress(data: bytes, method: Optional[str] = "zstd") -> bytes:
 
 
 def decompress(
-    data: bytes, method: Optional[str] = "zstd", max_output_size: int = COMPRESSION_MAX_OUTPUT_SIZE
+        data: bytes, method: Optional[str] = "zstd", max_output_size: int = COMPRESSION_MAX_OUTPUT_SIZE
 ) -> bytes:
     if method == "zstd":
         decompressor = ZstdDecompressor()

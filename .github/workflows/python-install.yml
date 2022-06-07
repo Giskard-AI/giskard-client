@@ -2,7 +2,6 @@ name: Python install
 
 on:
   push:
-  pull_request:
 
 jobs:
   build:
@@ -23,6 +22,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install poetry
           poetry install
+      - name: Test with pytest
+        run: |
+          .venv/bin/pytest --cov=giskard tests --cov-report=xml
       - name: Build
         run: |
           poetry build
