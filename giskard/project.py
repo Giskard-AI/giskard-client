@@ -71,7 +71,7 @@ class GiskardProject:
             self,
             df: pd.DataFrame,
             feature_types: Dict[str, str],
-            target: str,
+            target: str = None,
             name: str = None,
     ) -> requests.Response:
         logging.info(f"Uploading dataset '{name}' to project '{self.project_key}'...")
