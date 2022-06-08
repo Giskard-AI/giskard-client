@@ -163,8 +163,9 @@ class GiskardProject:
     def _validate_target(target, dataframe_keys):
         if target not in dataframe_keys:
             raise ValueError(
-                f"Invalid target_column parameter: '{target}'."
-                f" Please select a target from the column names of the dataset:  {dataframe_keys}.")
+                f"Invalid target_column parameter:"
+                f" If Dataframe does not contain target column, please do not pass target_column in the input\n"
+                f" OR select the target_column from the column names of the dataset:  {dataframe_keys}.")
 
     @staticmethod
     def _validate_features(feature_names=None, feature_types=None, validate_df=None):
@@ -226,8 +227,12 @@ class GiskardProject:
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type, classification_labels) -> None:
         prediction = prediction_function(df)
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
-            if not any(isinstance(y, float) for x in prediction for y in x):
-                raise ValueError("Model prediction should return float values ")
+            if model_type == SupportedModelTypes.CLASSIFICATION.value:
+                if not any(isinstance(y, float) for x in prediction for y in x):
+                    raise ValueError("Model prediction should return float values ")
+            if model_type == SupportedModelTypes.REGRESSION.value:
+                if not any(isinstance(x, float) for x in prediction):
+                    raise ValueError("Model prediction should return float values ")
         else:
             raise ValueError("Model should return numpy array or a list")
 
