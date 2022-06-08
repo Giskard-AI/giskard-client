@@ -51,7 +51,7 @@ class GiskardProject:
 
         if validate_df is not None:
             self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
-            if target is not None:
+            if target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
 
@@ -109,7 +109,7 @@ class GiskardProject:
     def upload_model_and_df(
             self,
             prediction_function: Callable[[pd.DataFrame], Iterable[Union[str, float, int]]],
-            prediction_task: str,
+            model_type: str,
             feature_names: List[str],
             df: pd.DataFrame,
             column_types: Dict[str, str],
@@ -120,7 +120,7 @@ class GiskardProject:
             classification_labels: Optional[List[str]] = None,
     ) -> None:
         self.upload_model(prediction_function=prediction_function,
-                          model_type=prediction_task,
+                          model_type=model_type,
                           feature_names=feature_names,
                           name=model_name,
                           classification_threshold=classification_threshold,
@@ -134,13 +134,13 @@ class GiskardProject:
             target=target)
 
     @staticmethod
-    def _validate_model_type(prediction_task, classification_labels=None):
-        if prediction_task not in {task.value for task in SupportedModelTypes}:
+    def _validate_model_type(model_type, classification_labels=None):
+        if model_type not in {task.value for task in SupportedModelTypes}:
             raise ValueError(
-                f"Invalid prediction_task parameter: {prediction_task}. "
+                f"Invalid model_type parameter: {model_type}. "
                 + f"Please choose one of {[task.value for task in SupportedModelTypes]}."
             )
-        if prediction_task == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
+        if model_type == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
             raise ValueError(
                 "Invalid Input parameter. Please do not pass 'classification_labels' for Regression Model.")
 
@@ -220,9 +220,9 @@ class GiskardProject:
                 )
 
     @staticmethod
-    def _validate_classification_labels(classification_labels, prediction_task):
+    def _validate_classification_labels(classification_labels, model_type):
         res = None
-        if prediction_task == SupportedModelTypes.CLASSIFICATION.value:
+        if model_type == SupportedModelTypes.CLASSIFICATION.value:
             if (
                     classification_labels is not None
                     and hasattr(classification_labels, "__iter__")
