@@ -26,16 +26,16 @@ def test_upload_df(diabetes_dataset):
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(
             df=df,
-            feature_types=input_types,
+            column_types=input_types,
             target=target,
             name="diabetes dataset")
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(df=df,
-                          feature_types={"test":"test"},
+                          column_types={"test":"test"},
                           name="diabetes dataset")
 
     project.upload_df(df=df,
-                      feature_types=input_types,
+                      column_types=input_types,
                       name="diabetes dataset")
 
     req = httpretty.last_request()

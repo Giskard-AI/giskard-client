@@ -36,7 +36,8 @@ class GiskardProject:
             name: str = None,
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
-            validate_df: pd.DataFrame = None
+            validate_df: pd.DataFrame = None,
+            target: Optional[List[str]] = None
     ):
         print(f"Initiating model upload to project '{self.project_key}'...")
 
@@ -45,11 +46,14 @@ class GiskardProject:
         self._validate_prediction_function(prediction_function)
 
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            self._validate_classification_threshold_label(classification_threshold, classification_labels)
+            self._validate_classification_threshold_label(classification_labels, classification_threshold)
             classification_labels = self._validate_classification_labels(classification_labels, model_type)
 
         if validate_df is not None:
             self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+            if target is not None:
+                target_values = validate_df[target].unique()
+                self._validate_label_with_target(classification_labels, target_values)
 
         model = self._serialize(prediction_function)
         requirements = get_python_requirements()
@@ -75,22 +79,22 @@ class GiskardProject:
     def upload_df(
             self,
             df: pd.DataFrame,
-            feature_types: Dict[str, str],
+            column_types: Dict[str, str],
             target: str = None,
             name: str = "None",
     ) -> requests.Response:
         print(f"Initiating dataset upload to project '{self.project_key}'...")
-        self._validate_features(feature_types=feature_types)
+        self._validate_features(column_types=column_types)
         if target is not None:
             self._validate_target(target, df.keys())
-        self.validate_df(df, feature_types)
-        self._validate_input_types(feature_types)
+        self.validate_df(df, column_types)
+        self._validate_input_types(column_types)
 
         data = compress(save_df(df))
         params = {
             "projectKey": self.project_key,
             "name": name,
-            "featureTypes": feature_types,
+            "featureTypes": column_types,
             "target": target
         }
 
@@ -108,24 +112,25 @@ class GiskardProject:
             prediction_task: str,
             feature_names: List[str],
             df: pd.DataFrame,
-            feature_types: Dict[str, str],
+            column_types: Dict[str, str],
             target: str = None,
             model_name: str = None,
             dataset_name: str = None,
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
     ) -> None:
-        self.upload_model(prediction_function,
-                          prediction_task,
-                          feature_names,
-                          model_name,
-                          classification_threshold,
-                          classification_labels,
-                          df)
+        self.upload_model(prediction_function=prediction_function,
+                          model_type=prediction_task,
+                          feature_names=feature_names,
+                          name=model_name,
+                          classification_threshold=classification_threshold,
+                          classification_labels=classification_labels,
+                          validate_df=df,
+                          target=target)
         self.upload_df(
             df=df,
             name=dataset_name,
-            feature_types=feature_types,
+            column_types=column_types,
             target=target)
 
     @staticmethod
@@ -161,14 +166,14 @@ class GiskardProject:
 
     @staticmethod
     def _validate_target(target, dataframe_keys):
-        if target not in dataframe_keys:
+        if target is not None and target not in dataframe_keys:
             raise ValueError(
-                f"Invalid target_column parameter:"
-                f" If Dataframe does not contain target column, please do not pass target_column in the input\n"
-                f" OR select the target_column from the column names of the dataset:  {dataframe_keys}.")
+                f"Invalid target parameter:"
+                f" Select the target from the column names of the dataset:  {dataframe_keys}.\n"
+                f" ATTENTION: If Dataframe does not contain target column, please do not pass target in the input")
 
     @staticmethod
-    def _validate_features(feature_names=None, feature_types=None, validate_df=None):
+    def _validate_features(feature_names=None, column_types=None, validate_df=None):
         if feature_names is not None:
             if not isinstance(feature_names, list):
                 raise ValueError(
@@ -180,13 +185,14 @@ class GiskardProject:
                     raise ValueError(
                         f"Value mentioned in  feature_names is  not available in validate_df: {missing_columns} ")
 
-        if feature_types is not None and not isinstance(feature_types, dict):
+        if column_types is not None and not isinstance(column_types, dict):
             raise ValueError(
-                f"Invalid feature_types parameter. Please provide the feature names as a dictionary."
+                f"Invalid column_types parameter. Please provide the feature names as a dictionary."
             )
 
     @staticmethod
-    def _validate_classification_threshold_label(classification_threshold, classification_labels):
+    def _validate_classification_threshold_label(classification_labels, classification_threshold=None,
+                                                 target_values=None):
         if classification_labels is None:
             raise ValueError(
                 f"Missing classification_labels parameter for classification model."
@@ -195,11 +201,22 @@ class GiskardProject:
             raise ValueError(
                 f"Invalid classification_threshold parameter: {classification_threshold}. Please specify valid number."
             )
-        if classification_threshold != 0.5 or classification_threshold is not None:
-            if len(classification_labels) != 2:
+
+        if classification_threshold is not None:
+            if classification_threshold != 0.5:
+                if len(classification_labels) != 2:
+                    raise ValueError(
+                        f"Invalid classification_threshold parameter:  {classification_threshold} value is applicable "
+                        f"only for binary classification. "
+                    )
+
+    @staticmethod
+    def _validate_label_with_target(classification_labels, target_values=None):
+        if target_values is not None:
+            if set(target_values) != set(classification_labels):
                 raise ValueError(
-                    f"Invalid classification_threshold parameter:  {classification_threshold} value is applicable "
-                    f"only for binary classification. "
+                    f"Invalid classification_labels parameter: {classification_labels} do not match with"
+                    f" target column values{target_values}."
                 )
 
     @staticmethod
@@ -246,7 +263,7 @@ class GiskardProject:
     def validate_df(df: pd.DataFrame, input_types) -> pd.DataFrame:
         if not set(input_types.keys()).issubset(set(df.columns)):
             missing_columns = set(input_types.keys()) - set(df.columns)
-            raise ValueError(f"Value mentioned in  feature_types is not available in dataframe: {missing_columns} ")
+            raise ValueError(f"Value mentioned in  column_types is not available in dataframe: {missing_columns} ")
 
         else:
             pandas_inferred_input_types = df.dtypes.to_dict()
