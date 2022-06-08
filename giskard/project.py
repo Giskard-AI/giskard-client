@@ -147,9 +147,9 @@ class GiskardProject:
     @staticmethod
     def _validate_input_types(input_types):
         if input_types and type(input_types) is dict:
-            if set(input_types.values()) > {column_type.value for column_type in SupportedColumnType}:
+            if not set(input_types.values()).issubset(set(column_type.value for column_type in SupportedColumnType)):
                 raise ValueError(
-                    f"Invalid input_types parameter: {input_types}. "
+                    f"Invalid input_types parameter: "
                     + f"Please choose types among {[column_type.value for column_type in SupportedColumnType]}."
                 )
         else:
@@ -254,7 +254,7 @@ class GiskardProject:
             raise ValueError("Model should return numpy array or a list")
 
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if not np.all(np.sum(prediction, axis=1) == 1):
+            if not np.all(np.round(np.sum(prediction, axis=1), 2) == 1):
                 raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
             if not prediction.shape[1] == len(classification_labels):
                 raise ValueError("Prediction output label shape and classification_labels shape do not match")
