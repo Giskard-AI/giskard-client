@@ -1,0 +1,5 @@
+.idea
+dist
+.coverage
+coverage.xml
+htmlcov
