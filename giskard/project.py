@@ -159,9 +159,8 @@ class GiskardProject:
     def _validate_target(target, dataframe_keys):
         if target is not None and target not in dataframe_keys:
             raise ValueError(
-                f"Invalid target parameter:"
-                f" Select the target from the column names of the dataset:  {dataframe_keys}.\n"
-                f" ATTENTION: If Dataframe does not contain target column, please do not pass target in the input")
+                f"Invalid target parameter: "
+                f" Select the target from the column names of the dataset: {dataframe_keys}")
 
     @staticmethod
     def _validate_features(feature_names=None, column_types=None, validate_df=None):
@@ -174,7 +173,7 @@ class GiskardProject:
                 if not set(feature_names).issubset(set(validate_df.columns)):
                     missing_columns = set(feature_names) - set(validate_df.columns)
                     raise ValueError(
-                        f"Value mentioned in  feature_names is  not available in validate_df: {missing_columns} ")
+                        f"Value mentioned in feature_names is not available in validate_df: {missing_columns} ")
 
         if column_types is not None and not isinstance(column_types, dict):
             raise ValueError(
@@ -196,7 +195,7 @@ class GiskardProject:
             if classification_threshold != 0.5:
                 if len(classification_labels) != 2:
                     raise ValueError(
-                        f"Invalid classification_threshold parameter:  {classification_threshold} value is applicable "
+                        f"Invalid classification_threshold parameter: {classification_threshold} value is applicable "
                         f"only for binary classification. "
                     )
 
@@ -262,7 +261,7 @@ class GiskardProject:
     def validate_df(df: pd.DataFrame, input_types) -> pd.DataFrame:
         if not set(input_types.keys()).issubset(set(df.columns)):
             missing_columns = set(input_types.keys()) - set(df.columns)
-            raise ValueError(f"Value mentioned in  column_types is not available in dataframe: {missing_columns} ")
+            raise ValueError(f"Value mentioned in column_types is not available in dataframe: {missing_columns} ")
 
         else:
             pandas_inferred_input_types = df.dtypes.to_dict()
