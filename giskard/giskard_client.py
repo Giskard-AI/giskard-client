@@ -1,4 +1,5 @@
 """API Client to interact with the Giskard app"""
+import warnings
 from typing import List
 from urllib.parse import urljoin
 
@@ -9,7 +10,11 @@ from giskard.project import GiskardProject
 
 
 class GiskardError(Exception):
-    pass
+
+    def __init__(self, message: str, status: int, code: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
 
 
 class ErrorHandlingAdapter(HTTPAdapter):
@@ -21,7 +26,9 @@ class ErrorHandlingAdapter(HTTPAdapter):
             try:
                 err_resp = response.json()
                 giskard_error = GiskardError(
-                    f"{err_resp.get('title', 'Unknown error')}: {err_resp.get('detail', 'no details')}")
+                    status=err_resp.get('status'),
+                    code=err_resp.get('message'),
+                    message=f"{err_resp.get('title', 'Unknown error')}: {err_resp.get('detail', 'no details')}")
             except:  # NOSONAR
                 response.raise_for_status()
             raise giskard_error
@@ -48,11 +55,17 @@ class GiskardClient:
         return GiskardProject(self._session, response['key'])
 
     def create_project(self, project_key: str, name: str, description: str = None):
-        response = self._session.post('project', json={
-            "description": description,
-            "key": project_key,
-            "name": name
-        }).json()
+        try:
+            response = self._session.post('project', json={
+                "description": description,
+                "key": project_key,
+                "name": name
+            }).json()
+        except GiskardError as e:
+            if e.code == 'error.http.409':
+                warnings.warn("This project key already exists. "
+                              "If you want to reuse existing project use get_project(“project_key”) instead")
+            raise e
         actual_project_key = response.get('key')
         if actual_project_key != project_key:
             print(f"Project created with a key : {actual_project_key}")
