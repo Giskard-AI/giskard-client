@@ -1,8 +1,7 @@
 import json
 import logging
 from typing import Callable, Dict, Iterable, List, Optional, Union
-import sys
-sys.tracebacklimit = None # set to 0 for No stack trace
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -44,10 +43,10 @@ class GiskardProject:
         self._validate_model_type(model_type, classification_labels)
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
+        classification_labels = self._validate_classification_labels(classification_labels, model_type)
 
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
-            classification_labels = self._validate_classification_labels(classification_labels, model_type)
 
         if validate_df is not None:
             self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
@@ -81,7 +80,7 @@ class GiskardProject:
             df: pd.DataFrame,
             column_types: Dict[str, str],
             target: str = None,
-            name: str = "None",
+            name: str = None,
     ) -> requests.Response:
         print(f"Initiating dataset upload to project '{self.project_key}'...")
         self._validate_features(column_types=column_types)
@@ -140,9 +139,6 @@ class GiskardProject:
                 f"Invalid model_type parameter: {model_type}. "
                 + f"Please choose one of {[task.value for task in SupportedModelTypes]}."
             )
-        if model_type == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
-            raise ValueError(
-                "Invalid Input parameter. Please do not pass 'classification_labels' for Regression Model.")
 
     @staticmethod
     def _validate_input_types(input_types):
@@ -191,8 +187,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def _validate_classification_threshold_label(classification_labels, classification_threshold=None,
-                                                 target_values=None):
+    def _validate_classification_threshold_label(classification_labels, classification_threshold=None):
         if classification_labels is None:
             raise ValueError(
                 f"Missing classification_labels parameter for classification model."
@@ -238,6 +233,9 @@ class GiskardProject:
                 raise ValueError(
                     f"Invalid classification_labels parameter: {classification_labels}. Please specify valid list of strings."
                 )
+        if model_type == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
+            warnings.warn("'classification_labels' parameter is ignored for regression model")
+            res = None
         return res
 
     @staticmethod
