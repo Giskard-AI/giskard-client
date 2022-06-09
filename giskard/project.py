@@ -1,7 +1,6 @@
 import json
-import logging
-from typing import Callable, Dict, Iterable, List, Optional, Union
 import warnings
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -40,7 +39,7 @@ class GiskardProject:
     ):
         print(f"Initiating model upload to project '{self.project_key}'...")
 
-        self._validate_model_type(model_type, classification_labels)
+        self._validate_model_type(model_type)
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
         classification_labels = self._validate_classification_labels(classification_labels, model_type)
@@ -133,7 +132,7 @@ class GiskardProject:
             target=target)
 
     @staticmethod
-    def _validate_model_type(model_type, classification_labels=None):
+    def _validate_model_type(model_type):
         if model_type not in {task.value for task in SupportedModelTypes}:
             raise ValueError(
                 f"Invalid model_type parameter: {model_type}. "
@@ -227,11 +226,13 @@ class GiskardProject:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
                 else:
                     raise ValueError(
-                        f"Invalid classification_labels parameter: {classification_labels}. Please specify more than 1 label."
+                        f"Invalid classification_labels parameter: {classification_labels}. "
+                        f"Please specify more than 1 label."
                     )
             else:
                 raise ValueError(
-                    f"Invalid classification_labels parameter: {classification_labels}. Please specify valid list of strings."
+                    f"Invalid classification_labels parameter: {classification_labels}. "
+                    f"Please specify valid list of strings."
                 )
         if model_type == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
             warnings.warn("'classification_labels' parameter is ignored for regression model")
