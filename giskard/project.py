@@ -1,7 +1,6 @@
 import json
-import logging
-from typing import Callable, Dict, Iterable, List, Optional, Union
 import warnings
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
