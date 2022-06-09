@@ -3,8 +3,6 @@ from typing import Callable, Iterable, Union, List
 
 import pandas as pd
 
-PredictionFunction = Callable[[pd.DataFrame], Iterable[Union[str, float, int]]]
-
 
 class SupportedModelTypes(Enum):
     CLASSIFICATION = "classification"
@@ -19,7 +17,7 @@ class SupportedColumnType(Enum):
 
 class GiskardModel:
     def __init__(self,
-                 prediction_function: PredictionFunction,
+                 prediction_function: Callable[[pd.DataFrame], Iterable[Union[str, float, int]]],
                  model_type: str,
                  feature_names: List[str],
                  classification_labels: List[str] = None,
