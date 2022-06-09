@@ -23,7 +23,6 @@ class GiskardProject:
         Iterable[Union[str, float, int]],
     ]) -> bytes:
         compressed_pickle: bytes = compress(pickle_dumps(prediction_function))
-        print(f'Compressed model size: {len(compressed_pickle)} bytes')
         return compressed_pickle
 
     def upload_model(
@@ -37,8 +36,6 @@ class GiskardProject:
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
     ):
-        print(f"Initiating model upload to project '{self.project_key}'...")
-
         self._validate_model_type(model_type)
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
@@ -81,7 +78,6 @@ class GiskardProject:
             target: str = None,
             name: str = None,
     ) -> requests.Response:
-        print(f"Initiating dataset upload to project '{self.project_key}'...")
         self._validate_features(column_types=column_types)
         if target is not None:
             self._validate_target(target, df.keys())
@@ -110,7 +106,7 @@ class GiskardProject:
             model_type: str,
             df: pd.DataFrame,
             column_types: Dict[str, str],
-            feature_names: List[str],
+            feature_names: List[str] = None,
             target: str = None,
             model_name: str = None,
             dataset_name: str = None,
@@ -119,7 +115,7 @@ class GiskardProject:
     ) -> None:
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
-                          feature_names=feature_names,
+                          feature_names=feature_names or list(column_types.keys()),
                           name=model_name,
                           classification_threshold=classification_threshold,
                           classification_labels=classification_labels,
@@ -259,7 +255,7 @@ class GiskardProject:
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             if np.all(np.round(np.sum(prediction, axis=1), 2) != 1):
                 raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
-            if not prediction.shape[1] == len(classification_labels):
+            if prediction.shape[1] != len(classification_labels):
                 raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
     @staticmethod
