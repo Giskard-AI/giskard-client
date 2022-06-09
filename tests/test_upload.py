@@ -1,6 +1,6 @@
 import re
 from io import BytesIO
-
+import pytest
 import httpretty
 import numpy as np
 import pandas as pd
@@ -18,11 +18,26 @@ def test_upload_df(diabetes_dataset):
         httpretty.POST,
         "http://giskard-host:12345/api/v2/project/data/upload"
     )
-
     df, input_types, target = diabetes_dataset
+    dataset_name = "diabetes dataset"
     client = GiskardClient("http://giskard-host:12345", "SECRET_TOKEN")
     project = GiskardProject(client.session, "test-project")
-    project.upload_df(df, input_types, target, name="diabetes dataset")
+
+    with pytest.raises(Exception):  # Error Scenario
+        project.upload_df(
+            df=df,
+            column_types=input_types,
+            target=target,
+            name=dataset_name)
+    with pytest.raises(Exception):  # Error Scenario
+        project.upload_df(df=df,
+                          column_types={"test":"test"},
+                          name=dataset_name)
+
+    project.upload_df(df=df,
+                      column_types=input_types,
+                      name=dataset_name)
+
     req = httpretty.last_request()
     assert req.headers.get('Authorization') == 'Bearer SECRET_TOKEN'
     assert int(req.headers.get('Content-Length')) > 0
@@ -47,12 +62,20 @@ def test_upload_model(linear_regression_diabetes: GiskardModel, diabetes_dataset
     client = GiskardClient("http://giskard-host:12345", "SECRET_TOKEN")
     project = GiskardProject(client.session, "test-project")
     project.upload_model(
-        model.prediction_function,
-        model.model_type,
-        model.feature_names,
-        "uploaded model",
+        prediction_function=model.prediction_function,
+        model_type=model.model_type,
+        feature_names=model.feature_names,
+        name="uploaded model",
         validate_df=df
     )
+    with pytest.raises(Exception):
+        project.upload_model(
+            prediction_function=model.prediction_function,
+            model_type=model.model_type,
+            feature_names=input_types,
+            name="uploaded model",
+            validate_df=df
+        )
     req = httpretty.last_request()
     assert req.headers.get('Authorization') == 'Bearer SECRET_TOKEN'
     assert int(req.headers.get('Content-Length')) > 0
