@@ -33,10 +33,10 @@ class GiskardProject:
             model_type: str,
             feature_names: List[str],
             name: str = None,
+            validate_df: pd.DataFrame = None,
+            target: Optional[List[str]] = None,
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
-            validate_df: pd.DataFrame = None,
-            target: Optional[List[str]] = None
     ):
         print(f"Initiating model upload to project '{self.project_key}'...")
 
@@ -109,9 +109,9 @@ class GiskardProject:
             self,
             prediction_function: Callable[[pd.DataFrame], Iterable[Union[str, float, int]]],
             model_type: str,
-            feature_names: List[str],
             df: pd.DataFrame,
             column_types: Dict[str, str],
+            feature_names: List[str],
             target: str = None,
             model_name: str = None,
             dataset_name: str = None,
@@ -251,8 +251,12 @@ class GiskardProject:
         else:
             raise ValueError("Model should return numpy array or a list")
 
+        GiskardProject._validate_classification_prediction(classification_labels, model_type, prediction)
+
+    @staticmethod
+    def _validate_classification_prediction(classification_labels, model_type, prediction):
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if not np.all(np.round(np.sum(prediction, axis=1), 2) == 1):
+            if np.all(np.round(np.sum(prediction, axis=1), 2) != 1):
                 raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
             if not prediction.shape[1] == len(classification_labels):
                 raise ValueError("Prediction output label shape and classification_labels shape do not match")

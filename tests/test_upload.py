@@ -18,8 +18,8 @@ def test_upload_df(diabetes_dataset):
         httpretty.POST,
         "http://giskard-host:12345/api/v2/project/data/upload"
     )
-
     df, input_types, target = diabetes_dataset
+    dataset_name = "diabetes dataset"
     client = GiskardClient("http://giskard-host:12345", "SECRET_TOKEN")
     project = GiskardProject(client.session, "test-project")
 
@@ -28,15 +28,15 @@ def test_upload_df(diabetes_dataset):
             df=df,
             column_types=input_types,
             target=target,
-            name="diabetes dataset")
+            name=dataset_name)
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(df=df,
                           column_types={"test":"test"},
-                          name="diabetes dataset")
+                          name=dataset_name)
 
     project.upload_df(df=df,
                       column_types=input_types,
-                      name="diabetes dataset")
+                      name=dataset_name)
 
     req = httpretty.last_request()
     assert req.headers.get('Authorization') == 'Bearer SECRET_TOKEN'
