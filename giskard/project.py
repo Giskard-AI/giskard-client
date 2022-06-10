@@ -270,8 +270,6 @@ class GiskardProject:
         else:
             raise ValueError("Model should return numpy array or a list")
 
-        GiskardProject._validate_classification_prediction(classification_labels, model_type, prediction)
-
     @staticmethod
     def _validate_classification_prediction(classification_labels, model_type, prediction):
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
