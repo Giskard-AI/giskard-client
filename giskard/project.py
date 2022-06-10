@@ -52,6 +52,7 @@ class GiskardProject:
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(prediction_function, validate_df, model_type)
             if target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
+                self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
 
@@ -171,7 +172,7 @@ class GiskardProject:
             raise ValueError(
                 f"Invalid target parameter:"
                 f" Select the target from the column names of the dataset:  {dataframe_keys}.\n"
-                f" ATTENTION: If Dataframe does not contain target column, please do not pass target in the input")
+                f" ATTENTION: If Dataframe does not contain target column, please do not pass target parameter in the input")
 
     @staticmethod
     def _validate_features(feature_names=None, column_types=None, validate_df=None):
@@ -213,11 +214,11 @@ class GiskardProject:
     @staticmethod
     def _validate_label_with_target(classification_labels, target_values=None):
         if target_values is not None:
-            if set(target_values) != set(classification_labels):
-                raise ValueError(
-                    f"Invalid classification_labels parameter: {classification_labels} do not match with"
-                    f" target column values{target_values}."
-                )
+            if not set(target_values).issubset(set(classification_labels)):
+                invalid_target_values = set(target_values) - set(classification_labels)
+                warnings.warn(f"Target column has values{invalid_target_values} which are not declared in "
+                              f"classification_labels: {classification_labels}.")
+
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
