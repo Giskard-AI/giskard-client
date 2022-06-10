@@ -48,7 +48,9 @@ class GiskardProject:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
 
         if validate_df is not None:
-            self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+            prediction_function = self._transform_prediction_function(prediction_function, validate_df, feature_names)
+            if model_type == SupportedModelTypes.REGRESSION.value:
+                self._validate_model_execution(prediction_function, validate_df, model_type)
             if target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
@@ -151,6 +153,10 @@ class GiskardProject:
             raise ValueError(
                 f"Invalid input_types parameter: {input_types}. Please specify non-empty dictionary."
             )
+
+    @staticmethod
+    def _transform_prediction_function(prediction_function, df, feature_names):
+        return lambda df: prediction_function(df[feature_names])
 
     @staticmethod
     def _validate_prediction_function(prediction_function):
