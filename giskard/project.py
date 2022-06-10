@@ -90,7 +90,7 @@ class GiskardProject:
         if target is not None:
             self._validate_target(target, df.keys())
         self.validate_df(df, column_types)
-        self._validate_input_types(column_types)
+        self._validate_column_types(column_types, df)
 
         data = compress(save_df(df))
         params = {
@@ -144,16 +144,16 @@ class GiskardProject:
             )
 
     @staticmethod
-    def _validate_input_types(input_types):
-        if input_types and type(input_types) is dict:
-            if not set(input_types.values()).issubset(set(column_type.value for column_type in SupportedColumnType)):
+    def _validate_column_types(column_types, df):
+        if column_types and type(column_types) is dict:
+            if not set(column_types.values()).issubset(set(column_type.value for column_type in SupportedColumnType)):
                 raise ValueError(
-                    f"Invalid input_types parameter: "
+                    f"Invalid column_types parameter: "
                     + f"Please choose types among {[column_type.value for column_type in SupportedColumnType]}."
                 )
         else:
             raise ValueError(
-                f"Invalid input_types parameter: {input_types}. Please specify non-empty dictionary."
+                f"Invalid column_types parameter: {column_types}. Please specify non-empty dictionary."
             )
 
     @staticmethod
@@ -281,16 +281,20 @@ class GiskardProject:
                 raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
     @staticmethod
-    def validate_df(df: pd.DataFrame, input_types) -> pd.DataFrame:
-        if not set(input_types.keys()).issubset(set(df.columns)):
-            missing_columns = set(input_types.keys()) - set(df.columns)
-            raise ValueError(f"Value mentioned in  column_types is not available in dataframe: {missing_columns} ")
-
+    def validate_df(df: pd.DataFrame, column_types) -> pd.DataFrame:
+        if set(column_types.values()) < set(df.columns):
+            missing_columns = set(df.columns) - set(column_types.values())
+            raise ValueError(f"Missing column_types for columns: {missing_columns}")
+        elif set(column_types.values()) > set(df.columns):
+            missing_columns = set(column_types.values()) - set(df.columns)
+            raise ValueError(
+                f"Missing columns in dataframe according to column_types: {missing_columns}"
+            )
         else:
-            pandas_inferred_input_types = df.dtypes.to_dict()
-            for column, dtype in pandas_inferred_input_types.items():
+            pandas_inferred_column_types = df.dtypes.to_dict()
+            for column, dtype in pandas_inferred_column_types.items():
                 if (
-                        input_types.get(column) == SupportedColumnType.NUMERIC.value
+                        column_types.get(column) == SupportedColumnType.NUMERIC.value
                         and dtype == "object"
                 ):
                     df[column] = df[column].astype(float)
