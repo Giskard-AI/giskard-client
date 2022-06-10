@@ -184,9 +184,9 @@ class GiskardProject:
                 )
             if validate_df is not None:
                 if not set(feature_names).issubset(set(validate_df.columns)):
-                    missing_columns = set(feature_names) - set(validate_df.columns)
+                    missing_feature_names = set(feature_names) - set(validate_df.columns)
                     raise ValueError(
-                        f"Value mentioned in  feature_names is  not available in validate_df: {missing_columns} ")
+                        f"Value mentioned in  feature_names is  not available in validate_df: {missing_feature_names} ")
 
         if column_types is not None and not isinstance(column_types, dict):
             raise ValueError(
