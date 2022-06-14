@@ -37,6 +37,38 @@ class GiskardProject:
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
     ):
+        """
+        Function to upload the Model to Giskard
+        Args:
+            prediction_function:
+                The model you want to predict. It could be any Python function with the signature of
+                predict_proba for classification: It returns the classification probabilities for all
+                the classification labels
+                predict for regression : It returns the predicted values for regression models.
+            model_type:
+                "classification" for classification model
+                "regression" for regression model
+            feature_names:
+                 A list of the feature names of prediction_function.
+                 Some important remarks:
+                    Make sure these features are contained in df
+                    Make sure that prediction_function(df[feature_names]) does not return an error message
+                    Make sure these features have the same order as the ones used in the pipeline of prediction_function.
+            name:
+                The name of the model you want to upload
+            validate_df:
+                Dataset used to validate the model
+            target:
+                The column name in validate_df corresponding to the actual target variable (ground truth).
+            classification_threshold:
+                The probability threshold in the case of a binary classification model
+            classification_labels:
+                The classification labels of your prediction when prediction_task="classification".
+                 Some important remarks:
+                    If classification_labels is a list of n elements, make sure prediction_function is
+                     also returning probabilities
+                    Make sure the labels have the same order as the output of prediction_function
+        """
         self._validate_model_type(model_type)
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
@@ -83,6 +115,20 @@ class GiskardProject:
             target: str = None,
             name: str = None,
     ) -> requests.Response:
+        """
+        Function to upload Dataset to Giskard
+        Args:
+            df:
+                Dataset you want to upload
+            column_types:
+                A dictionary of column names and their types (numeric, category or text) for all columns of df.
+            target:
+                The column name in df corresponding to the actual target variable (ground truth).
+            name:
+                The name of the dataset you want to upload
+        Returns:
+                Response of the upload
+        """
         self._validate_features(column_types=column_types)
         if target is not None:
             self._validate_target(target, df.keys())
@@ -118,6 +164,42 @@ class GiskardProject:
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
     ) -> None:
+        """
+        Function to upload Dataset and model to Giskard
+        Args:
+            prediction_function:
+                The model you want to predict. It could be any Python function with the signature of
+                predict_proba for classification: It returns the classification probabilities for all
+                the classification labels
+                predict for regression : It returns the predicted values for regression models.
+            model_type:
+                "classification" for classification model
+                "regression" for regression model
+            df:
+                Dataset you want to upload
+            column_types:
+                A dictionary of column names and their types (numeric, category or text) for all columns of df.
+            feature_names:
+                 A list of the feature names of prediction_function.
+                 Some important remarks:
+                    Make sure these features are contained in df
+                    Make sure that prediction_function(df[feature_names]) does not return an error message
+                    Make sure these features have the same order as the ones used in the pipeline of prediction_function.
+            target:
+                The column name in df corresponding to the actual target variable (ground truth).
+            model_name:
+                The name of the model you want to upload
+            dataset_name:
+                The name of the dataset you want to upload
+            classification_threshold:
+                The probability threshold in the case of a binary classification model
+            classification_labels:
+                The classification labels of your prediction when prediction_task="classification".
+                 Some important remarks:
+                    If classification_labels is a list of n elements, make sure prediction_function is
+                     also returning probabilities
+                    Make sure the labels have the same order as the output of prediction_function
+        """
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
                           feature_names=feature_names or list(column_types.keys()),

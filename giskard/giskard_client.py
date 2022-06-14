@@ -51,10 +51,32 @@ class GiskardClient:
         return [GiskardProject(self._session, p['key']) for p in response]
 
     def get_project(self, project_key: str):
+        """
+        Function to get the project that belongs to the mentioned project key
+        Args:
+            project_key:
+                The unique value of  project provided during project creation
+        Returns:
+            GiskardProject:
+                The giskard project that belongs to the project key
+        """
         response = self._session.get(f'project', params={"key": project_key}).json()
         return GiskardProject(self._session, response['key'])
 
     def create_project(self, project_key: str, name: str, description: str = None):
+        """
+        Function to create a project in Giskard
+        Args:
+            project_key:
+                The unique value of the project which will be used to identify  and fetch teh project in future
+            name:
+                The name of the project
+            description:
+                Describe your project
+        Returns:
+            GiskardProject:
+                The project created in giskard
+        """
         try:
             response = self._session.post('project', json={
                 "description": description,
