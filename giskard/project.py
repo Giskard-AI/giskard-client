@@ -342,10 +342,10 @@ class GiskardProject:
     def _verify_prediction_output(model_type, prediction):
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
             if model_type == SupportedModelTypes.CLASSIFICATION.value:
-                if not any(isinstance(y, float) for x in prediction for y in x):
+                if not any(isinstance(y, (np.floating, float)) for x in prediction for y in x):
                     raise ValueError("Model prediction should return float values ")
             if model_type == SupportedModelTypes.REGRESSION.value:
-                if not any(isinstance(x, float) for x in prediction):
+                if not any(isinstance(x, (np.floating, float)) for x in prediction):
                     raise ValueError("Model prediction should return float values ")
         else:
             raise ValueError("Model should return numpy array or a list")
