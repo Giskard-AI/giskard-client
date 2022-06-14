@@ -78,13 +78,15 @@ class GiskardProject:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
 
         if validate_df is not None:
-            prediction_function = self._transform_prediction_function(prediction_function, validate_df, feature_names)
+            prediction_function = self._transform_prediction_function(prediction_function, feature_names)
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(prediction_function, validate_df, model_type)
-            if target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
+            elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
+                self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+            else:
                 self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
 
         model = self._serialize(prediction_function)
