@@ -106,7 +106,7 @@ class GiskardProject:
             ('requirementsFile', requirements)
         ]
         self.session.post('project/models/upload', data={}, files=files)
-        print(f"Model successfully uploaded to  project key '{self.project_key}' and is available at  {self.url} ")
+        print(f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
 
     def upload_df(
             self,
@@ -133,7 +133,7 @@ class GiskardProject:
         if target is not None:
             self._validate_target(target, df.keys())
         self.validate_df(df, column_types)
-        self._validate_column_types(column_types, df)
+        self._validate_column_types(column_types)
 
         data = compress(save_df(df))
         params = {
@@ -148,7 +148,7 @@ class GiskardProject:
             ('file', data)
         ]
 
-        print(f"Dataset successfully uploaded to  project key '{self.project_key}' and is available at  {self.url} ")
+        print(f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
         return self.session.post("project/data/upload", data={}, files=files)
 
     def upload_model_and_df(
@@ -223,7 +223,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def _validate_column_types(column_types, df):
+    def _validate_column_types(column_types):
         if column_types and type(column_types) is dict:
             if not set(column_types.values()).issubset(set(column_type.value for column_type in SupportedColumnType)):
                 raise ValueError(
@@ -236,7 +236,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def _transform_prediction_function(prediction_function, df, feature_names):
+    def _transform_prediction_function(prediction_function, feature_names):
         return lambda df: prediction_function(df[feature_names])
 
     @staticmethod
