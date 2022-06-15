@@ -295,10 +295,11 @@ class GiskardProject:
     @staticmethod
     def _validate_label_with_target(classification_labels, target_values=None):
         if target_values is not None:
+            target_values = target_values if isinstance(target_values, str) else [str(label) for label in target_values]
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
-                warnings.warn(f"Target column has values{invalid_target_values} which are not declared in "
-                              f"classification_labels: {classification_labels}.")
+                warnings.warn(f"Target column value {invalid_target_values} not declared in "
+                              f"classification_labels parameter: {classification_labels}")
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
