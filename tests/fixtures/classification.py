@@ -1,5 +1,6 @@
 import logging
 import time
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -39,7 +40,7 @@ input_types = {'account_check_status': "category",
 @pytest.fixture()
 def german_credit_data():
     logging.info("Reading german_credit_prepared.csv")
-    data = pd.read_csv('test_data/german_credit_prepared.csv')
+    data = pd.read_csv(Path(__file__).parent / '../test_data/german_credit_prepared.csv')
     target = 'default'
     return data, input_types, target
 
