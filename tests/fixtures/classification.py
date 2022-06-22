@@ -71,14 +71,14 @@ def german_credit_model(german_credit_data) -> GiskardModel:
 
     Y = df['default']
     X = df.drop(columns="default")
-    X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, Y,
+    x_train, x_test, y_train, y_test = model_selection.train_test_split(X, Y,
                                                                         test_size=0.20,
                                                                         random_state=30,
                                                                         stratify=Y)
-    clf.fit(X_train, Y_train)
+    clf.fit(x_train, y_train)
 
     train_time = time.time() - start
-    model_score = clf.score(X_test, Y_test)
+    model_score = clf.score(x_test, y_test)
     logging.info(f"Trained model with score: {model_score} in {round(train_time * 1000)} ms")
 
     return GiskardModel(
