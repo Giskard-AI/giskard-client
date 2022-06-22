@@ -65,7 +65,6 @@ def _test_upload_model(model: GiskardModel, data):
     )
     df, input_types, target = data
 
-    model = model
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
     if model.model_type == 'regression':
