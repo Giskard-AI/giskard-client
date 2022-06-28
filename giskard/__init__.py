@@ -16,6 +16,6 @@ def get_version() -> str:
         return "unknown"
 
 
-version: str = get_version()
+__version__ = get_version()
 
 from .giskard_client import GiskardClient

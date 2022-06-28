@@ -78,7 +78,7 @@ class GiskardProject:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
 
         if validate_df is not None:
-            prediction_function = self._transform_prediction_function(prediction_function, feature_names)
+            prediction_function = self.transform_prediction_function(prediction_function, feature_names)
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(prediction_function, validate_df, model_type)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
@@ -238,7 +238,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def _transform_prediction_function(prediction_function, feature_names):
+    def transform_prediction_function(prediction_function, feature_names):
         return lambda df: prediction_function(df[feature_names])
 
     @staticmethod
