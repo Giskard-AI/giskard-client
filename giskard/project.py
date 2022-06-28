@@ -361,14 +361,14 @@ class GiskardProject:
 
     @staticmethod
     def validate_df(df: pd.DataFrame, column_types) -> pd.DataFrame:
-        if set(column_types.values()) < set(df.columns):
-            missing_columns = set(df.columns) - set(column_types.values())
-            raise ValueError(f"Missing column_types for columns: {missing_columns}")
-        elif set(column_types.values()) > set(df.columns):
-            missing_columns = set(column_types.values()) - set(df.columns)
+        if not set(column_types.keys()).issubset(set(df.columns)):
+            missing_columns = set(column_types.keys()) - set(df.columns)
             raise ValueError(
                 f"Missing columns in dataframe according to column_types: {missing_columns}"
             )
+        elif not set(df.columns).issubset(set(column_types.keys())):
+            missing_columns = set(df.columns) - set(column_types.keys())
+            raise ValueError(f"Missing column_types for columns: {missing_columns}")
         else:
             pandas_inferred_column_types = df.dtypes.to_dict()
             for column, dtype in pandas_inferred_column_types.items():
