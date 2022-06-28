@@ -105,6 +105,16 @@ def _test_upload_model(model: GiskardModel, data):
     if model.model_type == 'classification':
         metadata = json.loads(meta.content)
         assert np.array_equal(model.classification_labels, metadata.get('classificationLabels'))
+        with pytest.raises(Exception):
+            project.upload_model_and_df(
+                prediction_function=model.prediction_function,
+                model_type=model.model_type,
+                df=df,
+                column_types=input_types,
+                feature_names=model.feature_names,
+                model_name=model_name,
+                classification_labels=model.classification_labels
+            )
     assert meta.headers.get(b'Content-Type') == b_content_type
     loaded_model = load_decompress(model_file.content)
 
