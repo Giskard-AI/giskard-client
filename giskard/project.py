@@ -136,7 +136,7 @@ class GiskardProject:
             self._validate_target(target, df.keys())
         self.validate_df(df, column_types)
         self._validate_column_types(column_types)
-        self._verify_categorical_columns(df, column_types)
+        self._verify_category_columns(df, column_types)
 
         data = compress(save_df(df))
         params = {
@@ -381,7 +381,7 @@ class GiskardProject:
             return df
 
     @staticmethod
-    def _verify_categorical_columns(df: pd.DataFrame, column_types):
+    def _verify_category_columns(df: pd.DataFrame, column_types):
         for name, types in column_types.items():
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(f"{name} column has more than 30 categories. "
