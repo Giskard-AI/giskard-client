@@ -7,16 +7,18 @@ import pandas as pd
 import requests
 from requests import Session
 
+from giskard.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.io_utils import compress, pickle_dumps, save_df
 from giskard.model import SupportedModelTypes, SupportedColumnType
 from giskard.python_utils import get_python_requirements, get_python_version
 
 
 class GiskardProject:
-    def __init__(self, session: Session, project_key: str) -> None:
+    def __init__(self, session: Session, project_key: str, analytics: GiskardAnalyticsCollector = None) -> None:
         self.project_key = project_key
-        self.session = session
-        self.url = self.session.base_url.replace("/api/v2/", "")
+        self._session = session
+        self.url = self._session.base_url.replace("/api/v2/", "")
+        self.analytics = analytics or GiskardAnalyticsCollector()
 
     @staticmethod
     def _serialize(prediction_function: Callable[
@@ -107,7 +109,17 @@ class GiskardProject:
             ('modelFile', model),
             ('requirementsFile', requirements)
         ]
-        self.session.post('project/models/upload', data={}, files=files)
+        self._session.post('project/models/upload', data={}, files=files)
+        self.analytics.track("Upload Model", {
+            "name": anonymize(name),
+            "projectKey": anonymize(self.project_key),
+            "languageVersion": get_python_version(),
+            "modelType": model_type,
+            "threshold": classification_threshold,
+            "featureNames": anonymize(feature_names),
+            "language": "PYTHON",
+            "classificationLabels": anonymize(classification_labels)
+        })
         print(f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
 
     def upload_df(
@@ -150,8 +162,16 @@ class GiskardProject:
             ('file', data)
         ]
 
+        result = self._session.post("project/data/upload", data={}, files=files)
         print(f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
-        return self.session.post("project/data/upload", data={}, files=files)
+        self.analytics.track("Upload dataset", {
+            "projectKey": anonymize(self.project_key),
+            "name": anonymize(name),
+            "featureTypes": anonymize(column_types),
+            "target": anonymize(target)
+        }
+                             )
+        return result
 
     def upload_model_and_df(
             self,
@@ -202,6 +222,7 @@ class GiskardProject:
                      also returning probabilities
                     Make sure the labels have the same order as the output of prediction_function
         """
+        self.analytics.track("Upload model and dataset")
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
                           feature_names=feature_names or list(column_types.keys()),

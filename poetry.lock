@@ -853,6 +853,19 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "mixpanel"
+version = "4.9.0"
+description = "Official Mixpanel library for Python"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.4.*"
+
+[package.dependencies]
+requests = ">=2.4.2"
+six = ">=1.9.0"
+urllib3 = "*"
+
+[[package]]
 name = "mypy"
 version = "0.910"
 description = "Optional static typing for Python"
@@ -1826,7 +1839,7 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.11"
-content-hash = "29c43fd4ec68cb5352348ad06174b079258b29c3044e1b0e5a7e700ac4131656"
+content-hash = "50e01df7a73997f4ac2354fcc59326aa5a2d78c49873fa277daa11da7b4e9d8d"
 
 [metadata.files]
 anyio = [
@@ -2282,6 +2295,10 @@ mccabe = [
 mistune = [
     {file = "mistune-0.8.4-py2.py3-none-any.whl", hash = "sha256:88a1051873018da288eee8538d476dffe1262495144b33ecb586c4ab266bb8d4"},
     {file = "mistune-0.8.4.tar.gz", hash = "sha256:59a3429db53c50b5c6bcc8a07f8848cb00d7dc8bdb431a4ab41920d201d4756e"},
+]
+mixpanel = [
+    {file = "mixpanel-4.9.0-py2.py3-none-any.whl", hash = "sha256:28093420171ca42c3204e5fe614f2d4270c24766c61d4a956df396b1f308dba5"},
+    {file = "mixpanel-4.9.0.tar.gz", hash = "sha256:52b6720aad8622ce87eae3b3307894c95443310bb01b068b2b199dfbf6ce8c9c"},
 ]
 mypy = [
     {file = "mypy-0.910-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:a155d80ea6cee511a3694b108c4494a39f42de11ee4e61e72bc424c490e46457"},

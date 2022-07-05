@@ -52,6 +52,7 @@ scikit-learn = "^1.0.2"
 types-requests = "^2.27.30"
 typing-extensions = "^3.10.0.2"
 zstandard = "^0.15.2"
+mixpanel = "^4.9.0"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.4"
