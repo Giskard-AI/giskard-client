@@ -32,7 +32,7 @@ class GiskardProject:
             self,
             prediction_function: Callable[[pd.DataFrame], Iterable[Union[str, float, int]]],
             model_type: str,
-            feature_names: List[str],
+            feature_names: List[str] = None,
             name: str = None,
             validate_df: pd.DataFrame = None,
             target: Optional[List[str]] = None,
@@ -51,7 +51,9 @@ class GiskardProject:
                 "classification" for classification model
                 "regression" for regression model
             feature_names:
-                 A list of the feature names of prediction_function.
+                 A list of the feature names of prediction_function. If provided, this list will be used to filter
+                 the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
+                 all of its columns are passed to the model.
                  Some important remarks:
                     Make sure these features are contained in df
                     Make sure that prediction_function(df[feature_names]) does not return an error message
@@ -76,22 +78,23 @@ class GiskardProject:
         self._validate_prediction_function(prediction_function)
         classification_labels = self._validate_classification_labels(classification_labels, model_type)
 
+        transformed_pred_func = self.transform_prediction_function(prediction_function, feature_names)
+
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
 
         if validate_df is not None:
-            prediction_function = self.transform_prediction_function(prediction_function, feature_names)
             if model_type == SupportedModelTypes.REGRESSION.value:
-                self._validate_model_execution(prediction_function, validate_df, model_type)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
-                self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels)
             else:
-                self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels)
 
-        model = self._serialize(prediction_function)
+        model = self._serialize(transformed_pred_func)
         requirements = get_python_requirements()
         params = {
             "name": name,
@@ -202,7 +205,9 @@ class GiskardProject:
             column_types:
                 A dictionary of column names and their types (numeric, category or text) for all columns of df.
             feature_names:
-                 A list of the feature names of prediction_function.
+                 A list of the feature names of prediction_function. If provided, this list will be used to filter
+                 the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
+                 all of its columns are passed to the model.
                  Some important remarks:
                     Make sure these features are contained in df
                     Make sure that prediction_function(df[feature_names]) does not return an error message
@@ -225,7 +230,7 @@ class GiskardProject:
         self.analytics.track("Upload model and dataset")
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
-                          feature_names=feature_names or list(column_types.keys()),
+                          feature_names=feature_names,
                           name=model_name,
                           classification_threshold=classification_threshold,
                           classification_labels=classification_labels,
@@ -259,8 +264,8 @@ class GiskardProject:
             )
 
     @staticmethod
-    def transform_prediction_function(prediction_function, feature_names):
-        return lambda df: prediction_function(df[feature_names])
+    def transform_prediction_function(prediction_function, feature_names=None):
+        return lambda df: prediction_function(df[feature_names]) if feature_names else prediction_function
 
     @staticmethod
     def _validate_prediction_function(prediction_function):
