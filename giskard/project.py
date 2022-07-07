@@ -85,14 +85,16 @@ class GiskardProject:
 
         if validate_df is not None:
             if model_type == SupportedModelTypes.REGRESSION.value:
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
+                                               target=target)
             else:
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
+                                               target=target)
 
         model = self._serialize(transformed_pred_func)
         requirements = get_python_requirements()
@@ -265,7 +267,10 @@ class GiskardProject:
 
     @staticmethod
     def transform_prediction_function(prediction_function, feature_names=None):
-        return lambda df: prediction_function(df[feature_names]) if feature_names else prediction_function
+        if feature_names:
+            return lambda df: prediction_function(df[feature_names])
+        else:
+            return prediction_function
 
     @staticmethod
     def _validate_prediction_function(prediction_function):
@@ -355,8 +360,10 @@ class GiskardProject:
 
     @staticmethod
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
-                                  classification_labels=None) -> None:
+                                  classification_labels=None, target=None) -> None:
         try:
+            if target is not None and target in df.columns:
+                df = df.drop(target, axis=1)
             prediction = prediction_function(df)
         except Exception:
             raise ValueError("Invalid prediction_function input.\n"
@@ -402,5 +409,11 @@ class GiskardProject:
                         column_types.get(column) == SupportedColumnType.NUMERIC.value
                         and dtype == "object"
                 ):
-                    df[column] = df[column].astype(float)
+                    try:
+                        df[column] = df[column].astype(float)
+                    except Exception as e:
+                        raise ValueError(f"Failed to convert column '{column}' to float") from e
             return df
+
+    def __repr__(self) -> str:
+        return f"GiskardProject(project_key='{self.project_key}')"
