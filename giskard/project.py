@@ -7,16 +7,18 @@ import pandas as pd
 import requests
 from requests import Session
 
+from giskard.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.io_utils import compress, pickle_dumps, save_df
 from giskard.model import SupportedModelTypes, SupportedColumnType
 from giskard.python_utils import get_python_requirements, get_python_version
 
 
 class GiskardProject:
-    def __init__(self, session: Session, project_key: str) -> None:
+    def __init__(self, session: Session, project_key: str, analytics: GiskardAnalyticsCollector = None) -> None:
         self.project_key = project_key
-        self.session = session
-        self.url = self.session.base_url.replace("/api/v2/", "")
+        self._session = session
+        self.url = self._session.base_url.replace("/api/v2/", "")
+        self.analytics = analytics or GiskardAnalyticsCollector()
 
     @staticmethod
     def _serialize(prediction_function: Callable[
@@ -30,7 +32,7 @@ class GiskardProject:
             self,
             prediction_function: Callable[[pd.DataFrame], Iterable[Union[str, float, int]]],
             model_type: str,
-            feature_names: List[str],
+            feature_names: List[str] = None,
             name: str = None,
             validate_df: pd.DataFrame = None,
             target: Optional[List[str]] = None,
@@ -49,7 +51,9 @@ class GiskardProject:
                 "classification" for classification model
                 "regression" for regression model
             feature_names:
-                 A list of the feature names of prediction_function.
+                 A list of the feature names of prediction_function. If provided, this list will be used to filter
+                 the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
+                 all of its columns are passed to the model.
                  Some important remarks:
                     Make sure these features are contained in df
                     Make sure that prediction_function(df[feature_names]) does not return an error message
@@ -74,22 +78,25 @@ class GiskardProject:
         self._validate_prediction_function(prediction_function)
         classification_labels = self._validate_classification_labels(classification_labels, model_type)
 
+        transformed_pred_func = self.transform_prediction_function(prediction_function, feature_names)
+
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
 
         if validate_df is not None:
-            prediction_function = self.transform_prediction_function(prediction_function, feature_names)
             if model_type == SupportedModelTypes.REGRESSION.value:
-                self._validate_model_execution(prediction_function, validate_df, model_type)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
-                self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
+                                               target=target)
             else:
-                self._validate_model_execution(prediction_function, validate_df, model_type, classification_labels)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
+                                               target=target)
 
-        model = self._serialize(prediction_function)
+        model = self._serialize(transformed_pred_func)
         requirements = get_python_requirements()
         params = {
             "name": name,
@@ -107,7 +114,17 @@ class GiskardProject:
             ('modelFile', model),
             ('requirementsFile', requirements)
         ]
-        self.session.post('project/models/upload', data={}, files=files)
+        self._session.post('project/models/upload', data={}, files=files)
+        self.analytics.track("Upload Model", {
+            "name": anonymize(name),
+            "projectKey": anonymize(self.project_key),
+            "languageVersion": get_python_version(),
+            "modelType": model_type,
+            "threshold": classification_threshold,
+            "featureNames": anonymize(feature_names),
+            "language": "PYTHON",
+            "classificationLabels": anonymize(classification_labels)
+        })
         print(f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
 
     def upload_df(
@@ -151,8 +168,16 @@ class GiskardProject:
             ('file', data)
         ]
 
+        result = self._session.post("project/data/upload", data={}, files=files)
         print(f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
-        return self.session.post("project/data/upload", data={}, files=files)
+        self.analytics.track("Upload dataset", {
+            "projectKey": anonymize(self.project_key),
+            "name": anonymize(name),
+            "featureTypes": anonymize(column_types),
+            "target": anonymize(target)
+        }
+                             )
+        return result
 
     def upload_model_and_df(
             self,
@@ -183,7 +208,9 @@ class GiskardProject:
             column_types:
                 A dictionary of column names and their types (numeric, category or text) for all columns of df.
             feature_names:
-                 A list of the feature names of prediction_function.
+                 A list of the feature names of prediction_function. If provided, this list will be used to filter
+                 the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
+                 all of its columns are passed to the model.
                  Some important remarks:
                     Make sure these features are contained in df
                     Make sure that prediction_function(df[feature_names]) does not return an error message
@@ -203,9 +230,10 @@ class GiskardProject:
                      also returning probabilities
                     Make sure the labels have the same order as the output of prediction_function
         """
+        self.analytics.track("Upload model and dataset")
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
-                          feature_names=feature_names or list(column_types.keys()),
+                          feature_names=feature_names,
                           name=model_name,
                           classification_threshold=classification_threshold,
                           classification_labels=classification_labels,
@@ -239,8 +267,11 @@ class GiskardProject:
             )
 
     @staticmethod
-    def transform_prediction_function(prediction_function, feature_names):
-        return lambda df: prediction_function(df[feature_names])
+    def transform_prediction_function(prediction_function, feature_names=None):
+        if feature_names:
+            return lambda df: prediction_function(df[feature_names])
+        else:
+            return prediction_function
 
     @staticmethod
     def _validate_prediction_function(prediction_function):
@@ -330,8 +361,10 @@ class GiskardProject:
 
     @staticmethod
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
-                                  classification_labels=None) -> None:
+                                  classification_labels=None, target=None) -> None:
         try:
+            if target is not None and target in df.columns:
+                df = df.drop(target, axis=1)
             prediction = prediction_function(df)
         except Exception:
             raise ValueError("Invalid prediction_function input.\n"
@@ -377,7 +410,10 @@ class GiskardProject:
                         column_types.get(column) == SupportedColumnType.NUMERIC.value
                         and dtype == "object"
                 ):
-                    df[column] = df[column].astype(float)
+                    try:
+                        df[column] = df[column].astype(float)
+                    except Exception as e:
+                        raise ValueError(f"Failed to convert column '{column}' to float") from e
             return df
 
     @staticmethod
@@ -386,3 +422,6 @@ class GiskardProject:
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
                               f"necessary use 'numeric' or 'text' in column_types instead")
+
+    def __repr__(self) -> str:
+        return f"GiskardProject(project_key='{self.project_key}')"

@@ -1,4 +1,5 @@
 """API Client to interact with the Giskard app"""
+import logging
 import warnings
 from typing import List
 from urllib.parse import urljoin
@@ -6,6 +7,8 @@ from urllib.parse import urljoin
 from requests.adapters import HTTPAdapter
 from requests_toolbelt import sessions
 
+import giskard
+from giskard.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.project import GiskardProject
 
 
@@ -41,14 +44,22 @@ class GiskardClient:
         self._session = sessions.BaseUrlSession(base_url=base_url)
         self._session.mount(base_url, ErrorHandlingAdapter())
         self._session.headers.update({'Authorization': f"Bearer {token}"})
+        self.analytics = GiskardAnalyticsCollector()
+        try:
+            server_settings = self._session.get("settings").json()
+            self.analytics.init(server_settings)
+        except Exception:
+            logging.warning(f"Failed to fetch server settings", exc_info=True)
+        self.analytics.track("Init GiskardClient", {"client version": giskard.__version__})
 
     @property
     def session(self):
         return self._session
 
     def list_projects(self) -> List[GiskardProject]:
+        self.analytics.track('List Projects')
         response = self._session.get('projects').json()
-        return [GiskardProject(self._session, p['key']) for p in response]
+        return [GiskardProject(self._session, p['key'], analytics=self.analytics) for p in response]
 
     def get_project(self, project_key: str):
         """
@@ -60,8 +71,9 @@ class GiskardClient:
             GiskardProject:
                 The giskard project that belongs to the project key
         """
+        self.analytics.track('Get Project', {'project_key': anonymize(project_key)})
         response = self._session.get(f'project', params={"key": project_key}).json()
-        return GiskardProject(self._session, response['key'])
+        return GiskardProject(self._session, response['key'], analytics=self.analytics)
 
     def create_project(self, project_key: str, name: str, description: str = None):
         """
@@ -77,6 +89,11 @@ class GiskardClient:
             GiskardProject:
                 The project created in giskard
         """
+        self.analytics.track('Create Project', {
+            'project_key': anonymize(project_key),
+            'description': anonymize(description),
+            'name': anonymize(name),
+        })
         try:
             response = self._session.post('project', json={
                 "description": description,
@@ -91,4 +108,4 @@ class GiskardClient:
         actual_project_key = response.get('key')
         if actual_project_key != project_key:
             print(f"Project created with a key : {actual_project_key}")
-        return GiskardProject(self._session, actual_project_key)
+        return GiskardProject(self._session, actual_project_key, analytics=self.analytics)
