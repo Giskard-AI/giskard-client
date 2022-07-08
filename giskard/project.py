@@ -384,6 +384,5 @@ class GiskardProject:
     def _verify_category_columns(df: pd.DataFrame, column_types):
         for name, types in column_types.items():
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
-                warnings.warn(f"{name} column has more than 30 categories. "
-                              f"Are you sure it’s a “category” feature and not a “text” feature ? If No, turn "
-                              f"this feature type into “text” in column_types")
+                warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
+                              f"necessary use 'numeric' or 'text' in column_types instead")
