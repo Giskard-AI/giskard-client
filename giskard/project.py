@@ -153,6 +153,7 @@ class GiskardProject:
             self._validate_target(target, df.keys())
         self.validate_df(df, column_types)
         self._validate_column_types(column_types)
+        self._verify_category_columns(df, column_types)
 
         data = compress(save_df(df))
         params = {
@@ -414,6 +415,13 @@ class GiskardProject:
                     except Exception as e:
                         raise ValueError(f"Failed to convert column '{column}' to float") from e
             return df
+
+    @staticmethod
+    def _verify_category_columns(df: pd.DataFrame, column_types):
+        for name, types in column_types.items():
+            if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
+                warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
+                              f"necessary use 'numeric' or 'text' in column_types instead")
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
