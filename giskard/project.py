@@ -155,11 +155,13 @@ class GiskardProject:
         self._validate_column_types(column_types)
         self._verify_category_columns(df, column_types)
 
+        raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
         data = compress(save_df(df))
         params = {
             "projectKey": self.project_key,
             "name": name,
             "featureTypes": column_types,
+            "columnTypes": raw_column_types,
             "target": target
         }
 
