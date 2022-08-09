@@ -5,6 +5,16 @@ from mixpanel import Consumer
 from mixpanel import Mixpanel
 
 
+def nofail(func):
+    def inner_function(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except BaseException:  # NOSONAR
+            pass
+
+    return inner_function
+
+
 def anonymize(message):
     if not message:
         return None
@@ -15,13 +25,13 @@ def anonymize(message):
 
 
 class GiskardAnalyticsCollector:
-
     def __init__(self) -> None:
         self.mp = self.configure_mixpanel()
         self.is_enabled = False
         self.distinct_user_id = None
 
     @staticmethod
+    @nofail
     def configure_mixpanel():
         is_dev_mode = os.environ.get("GISKARD_DEV_MODE", "n").lower() in ['yes', 'true', '1']
         dev_mp_project_key = '4cca5fabca54f6df41ea500e33076c99'
@@ -32,6 +42,7 @@ class GiskardAnalyticsCollector:
             consumer=Consumer(api_host="pxl.giskard.ai"),
         )
 
+    @nofail
     def init(self, server_settings):
         giskard_instance_id = server_settings.get('app').get('generalSettings').get('instanceId')
         self.is_enabled = server_settings.get('app').get('generalSettings').get('isAnalyticsEnabled')
@@ -45,6 +56,7 @@ class GiskardAnalyticsCollector:
                 "Giskard Version": server_settings.get('app').get('version'),
             })
 
+    @nofail
     def track(self, event_name, properties=None, meta=None):
         if self.is_enabled:
             self.mp.track(distinct_id=self.distinct_user_id,
