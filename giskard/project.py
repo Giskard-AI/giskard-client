@@ -378,7 +378,7 @@ class GiskardProject:
 
     @staticmethod
     def _verify_prediction_output(df: pd.DataFrame,model_type, prediction):
-        assert len(df) == len(prediction), f"Row length '{len(df)}' of Dataframe provided does not match with" \
+        assert len(df) == len(prediction), f"Row length '{len(df)}' of dataframe provided does not match with " \
                                            f"Output length '{len(prediction)}' of prediction_function"
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
             if model_type == SupportedModelTypes.CLASSIFICATION.value:
