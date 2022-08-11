@@ -55,9 +55,9 @@ class GiskardProject:
                  the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
                  all of its columns are passed to the model.
                  Some important remarks:
-                    Make sure these features are contained in df
-                    Make sure that prediction_function(df[feature_names]) does not return an error message
-                    Make sure these features have the same order as the ones used in the pipeline of prediction_function.
+                    - Make sure these features are contained in df
+                    - Make sure that prediction_function(df[feature_names]) does not return an error message
+                    - Make sure these features have the same order as the ones used in the pipeline of prediction_function.
             name:
                 The name of the model you want to upload
             validate_df:
@@ -69,9 +69,10 @@ class GiskardProject:
             classification_labels:
                 The classification labels of your prediction when prediction_task="classification".
                  Some important remarks:
-                    If classification_labels is a list of n elements, make sure prediction_function is
+                    - If classification_labels is a list of n elements, make sure prediction_function is
                      also returning probabilities
-                    Make sure the labels have the same order as the output of prediction_function
+                    - Make sure the labels have the same order as the output of prediction_function
+                    - Prefer using categorical values instead of numeric values in classification_labels
         """
         self._validate_model_type(model_type)
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
@@ -214,9 +215,9 @@ class GiskardProject:
                  the dataframe's columns before applying the model. By default, the dataframe is used as-is, meaning that
                  all of its columns are passed to the model.
                  Some important remarks:
-                    Make sure these features are contained in df
-                    Make sure that prediction_function(df[feature_names]) does not return an error message
-                    Make sure these features have the same order as the ones used in the pipeline of prediction_function.
+                    - Make sure these features are contained in df
+                    - Make sure that prediction_function(df[feature_names]) does not return an error message
+                    - Make sure these features have the same order as the ones used in the pipeline of prediction_function.
             target:
                 The column name in df corresponding to the actual target variable (ground truth).
             model_name:
@@ -228,9 +229,10 @@ class GiskardProject:
             classification_labels:
                 The classification labels of your prediction when prediction_task="classification".
                  Some important remarks:
-                    If classification_labels is a list of n elements, make sure prediction_function is
+                    - If classification_labels is a list of n elements, make sure prediction_function is
                      also returning probabilities
-                    Make sure the labels have the same order as the output of prediction_function
+                    - Make sure the labels have the same order as the output of prediction_function
+                    - Prefer using categorical values instead of numeric values in classification_labels
         """
         self.analytics.track("Upload model and dataset")
         self.upload_model(prediction_function=prediction_function,
