@@ -332,8 +332,11 @@ class GiskardProject:
             target_values = target_values if isinstance(target_values, str) else [str(label) for label in target_values]
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
-                warnings.warn(f"Target column value {invalid_target_values} not declared in "
-                              f"classification_labels parameter: {classification_labels}")
+                raise ValueError(f"Target column value {invalid_target_values} not declared in "
+                                 f"classification_labels list: {classification_labels}")
+            elif not isinstance(target_values, str):
+                print('Hint: "Please, turn target variable from numerical values to categorical '
+                      'ones to have better user experience at inspection time"')
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
