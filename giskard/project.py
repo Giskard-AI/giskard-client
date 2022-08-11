@@ -364,6 +364,7 @@ class GiskardProject:
     @staticmethod
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
                                   classification_labels=None, target=None) -> None:
+        assert type(df) == pd.core.frame.DataFrame, "Dataset is not a pandas dataframe"
         try:
             if target is not None and target in df.columns:
                 df = df.drop(target, axis=1)
