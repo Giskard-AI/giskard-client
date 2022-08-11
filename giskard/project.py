@@ -74,6 +74,9 @@ class GiskardProject:
                     Make sure the labels have the same order as the output of prediction_function
         """
         self._validate_model_type(model_type)
+        if validate_df is not None:
+            self._verify_is_pandasdataframe(validate_df)
+
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
         classification_labels = self._validate_classification_labels(classification_labels, model_type)
@@ -148,6 +151,7 @@ class GiskardProject:
         Returns:
                 Response of the upload
         """
+        self._verify_is_pandasdataframe(df)
         self._validate_features(column_types=column_types)
         if target is not None:
             self._validate_target(target, df.keys())
@@ -364,7 +368,6 @@ class GiskardProject:
     @staticmethod
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
                                   classification_labels=None, target=None) -> None:
-        assert type(df) == pd.core.frame.DataFrame, "Dataset is not a pandas dataframe"
         try:
             if target is not None and target in df.columns:
                 df = df.drop(target, axis=1)
@@ -430,6 +433,10 @@ class GiskardProject:
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
                               f"necessary use 'numeric' or 'text' in column_types instead")
+
+    @staticmethod
+    def _verify_is_pandasdataframe(df):
+        assert type(df) == pd.core.frame.DataFrame, "Dataset provided is not a pandas dataframe"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
