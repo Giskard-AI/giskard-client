@@ -373,11 +373,12 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
-        GiskardProject._verify_prediction_output(model_type, prediction)
+        GiskardProject._verify_prediction_output(df, model_type, prediction)
         GiskardProject._validate_classification_prediction(classification_labels, model_type, prediction)
 
     @staticmethod
-    def _verify_prediction_output(model_type, prediction):
+    def _verify_prediction_output(df: pd.DataFrame,model_type, prediction):
+        assert len(df) == len(prediction), "Length of dataset rows and model predictions rows do not match"
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
             if model_type == SupportedModelTypes.CLASSIFICATION.value:
                 if not any(isinstance(y, (np.floating, float)) for x in prediction for y in x):
