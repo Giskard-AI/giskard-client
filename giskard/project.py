@@ -333,7 +333,7 @@ class GiskardProject:
         if target_values is not None:
             if not isinstance(target_values, str):
                 print('Hint: "Your target variable values are numeric. '
-                      'It’s recommended to have Human readable string as your target values '
+                      'It is recommended to have Human readable string as your target values '
                       'to make results more understandable in Giskard."')
 
             target_values = target_values if isinstance(target_values, str) else [str(label) for label in target_values]
