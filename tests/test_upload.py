@@ -125,7 +125,7 @@ def _test_upload_model(model: GiskardModel, data):
 @pytest.mark.parametrize('data,model,',
                          [('german_credit_data', 'german_credit_model'),
                           ('diabetes_dataset', 'linear_regression_diabetes')])
-def test_upload_regression_model(data, model, request):
+def test_upload_models(data, model, request):
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
     _test_upload_model(model, data)
