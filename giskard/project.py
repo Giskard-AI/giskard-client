@@ -436,7 +436,7 @@ class GiskardProject:
 
     @staticmethod
     def _verify_is_pandasdataframe(df):
-        assert type(df) == pd.core.frame.DataFrame, "Dataset provided is not a pandas dataframe"
+        assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
