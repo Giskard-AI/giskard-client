@@ -85,6 +85,16 @@ def _test_upload_model(model: GiskardModel, data):
             classification_labels=model.classification_labels
         )
 
+        with pytest.raises(Exception):
+            project.upload_model(
+                prediction_function=model.prediction_function,
+                model_type=model.model_type,
+                feature_names=model.feature_names,
+                name=model_name,
+                validate_df=df['sex'],
+                classification_labels=model.classification_labels
+
+            )
     with pytest.raises(Exception):
         project.upload_model(
             prediction_function=model.prediction_function,
