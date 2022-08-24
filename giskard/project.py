@@ -422,7 +422,8 @@ class GiskardProject:
             )
         elif not set(df.columns).issubset(set(column_types.keys())):
             missing_columns = set(df.columns) - set(column_types.keys())
-            raise ValueError(f"Missing column_types for columns: {missing_columns}")
+            raise ValueError(f"Invalid column_types parameter: Please declare the type for "
+                             f"{missing_columns} columns")
         else:
             pandas_inferred_column_types = df.dtypes.to_dict()
             for column, dtype in pandas_inferred_column_types.items():
