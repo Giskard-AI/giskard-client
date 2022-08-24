@@ -75,6 +75,9 @@ class GiskardProject:
                     - Prefer using categorical values instead of numeric values in classification_labels
         """
         self._validate_model_type(model_type)
+        if validate_df is not None:
+            self._verify_is_pandasdataframe(validate_df)
+
         self._validate_features(feature_names=feature_names, validate_df=validate_df)
         self._validate_prediction_function(prediction_function)
         classification_labels = self._validate_classification_labels(classification_labels, model_type)
@@ -149,6 +152,7 @@ class GiskardProject:
         Returns:
                 Response of the upload
         """
+        self._verify_is_pandasdataframe(df)
         self._validate_features(column_types=column_types)
         if target is not None:
             self._validate_target(target, df.keys())
@@ -380,11 +384,13 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
-        GiskardProject._verify_prediction_output(model_type, prediction)
+        GiskardProject._verify_prediction_output(df, model_type, prediction)
         GiskardProject._validate_classification_prediction(classification_labels, model_type, prediction)
 
     @staticmethod
-    def _verify_prediction_output(model_type, prediction):
+    def _verify_prediction_output(df: pd.DataFrame,model_type, prediction):
+        assert len(df) == len(prediction), f"Number of rows ({len(df)}) of dataset provided does not match with the " \
+                                           f"number of rows ({len(prediction)}) of prediction_function output"
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
             if model_type == SupportedModelTypes.CLASSIFICATION.value:
                 if not any(isinstance(y, (np.floating, float)) for x in prediction for y in x):
@@ -435,6 +441,10 @@ class GiskardProject:
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
                               f"necessary use 'numeric' or 'text' in column_types instead")
+
+    @staticmethod
+    def _verify_is_pandasdataframe(df):
+        assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"

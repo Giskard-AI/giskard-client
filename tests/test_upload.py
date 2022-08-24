@@ -16,7 +16,7 @@ token = "SECRET_TOKEN"
 auth = 'Bearer SECRET_TOKEN'
 content_type = 'multipart/form-data; boundary='
 model_name = 'uploaded model'
-b_content_type= b'application/json'
+b_content_type = b'application/json'
 
 
 @httpretty.activate(verbose=True, allow_net_connect=False)
@@ -122,9 +122,10 @@ def _test_upload_model(model: GiskardModel, data):
     assert requirements_file.content.decode()
 
 
-def test_upload_regression_model(linear_regression_diabetes, diabetes_dataset):
-    _test_upload_model(linear_regression_diabetes, diabetes_dataset)
-
-
-def test_upload_classification_model(german_credit_model, german_credit_data):
-    _test_upload_model(german_credit_model, german_credit_data)
+@pytest.mark.parametrize('data,model,',
+                         [('german_credit_data', 'german_credit_model'),
+                          ('diabetes_dataset', 'linear_regression_diabetes')])
+def test_upload_models(data, model, request):
+    data = request.getfixturevalue(data)
+    model = request.getfixturevalue(model)
+    _test_upload_model(model, data)

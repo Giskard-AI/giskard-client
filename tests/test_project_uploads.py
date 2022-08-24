@@ -1,8 +1,11 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from giskard.model import SupportedModelTypes
 from giskard.project import GiskardProject
+
+data = np.array(['g', 'e', 'e', 'k', 's'])
 
 
 @pytest.mark.parametrize('pred', [
@@ -28,3 +31,18 @@ def test__validate_classification_prediction_pass(pred):
     GiskardProject._validate_classification_prediction(['one', 'two'],
                                                        SupportedModelTypes.CLASSIFICATION.value,
                                                        np.array(pred))
+
+
+@pytest.mark.parametrize('data', [
+    pd.Series(data)
+])
+def test_verify_is_pandasdataframe_fail(data):
+    with pytest.raises(AssertionError):
+        GiskardProject._verify_is_pandasdataframe(data)
+
+
+@pytest.mark.parametrize('data', [
+    pd.DataFrame(data)
+])
+def test_verify_is_pandasdataframe_pass(data):
+    GiskardProject._verify_is_pandasdataframe(data)
