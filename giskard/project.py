@@ -239,6 +239,11 @@ class GiskardProject:
                     - Prefer using categorical values instead of numeric values in classification_labels
         """
         self.analytics.track("Upload model and dataset")
+        self.upload_df(
+            df=df,
+            name=dataset_name,
+            column_types=column_types,
+            target=target)
         self.upload_model(prediction_function=prediction_function,
                           model_type=model_type,
                           feature_names=feature_names,
@@ -247,11 +252,7 @@ class GiskardProject:
                           classification_labels=classification_labels,
                           validate_df=df,
                           target=target)
-        self.upload_df(
-            df=df,
-            name=dataset_name,
-            column_types=column_types,
-            target=target)
+
 
     @staticmethod
     def _validate_model_type(model_type):
