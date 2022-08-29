@@ -331,7 +331,7 @@ class GiskardProject:
     @staticmethod
     def _validate_label_with_target(classification_labels, target_values=None):
         if target_values is not None:
-            if not isinstance(target_values, str):
+            if not all(isinstance(item, str) for item in target_values):
                 print('Hint: "Your target variable values are numeric. '
                       'It is recommended to have Human readable string as your target values '
                       'to make results more understandable in Giskard."')
