@@ -112,16 +112,22 @@ class GiskardProject:
 
     def _validate_model(self, classification_labels, classification_threshold, feature_names, model_type,
                         prediction_function, target, validate_df):
-        self._validate_model_type(model_type)
-        if validate_df is not None:
-            self._verify_is_pandasdataframe(validate_df)
-        self._validate_features(feature_names=feature_names, validate_df=validate_df)
-        self._validate_prediction_function(prediction_function)
-        classification_labels = self._validate_classification_labels(classification_labels, model_type)
         transformed_pred_func = self.transform_prediction_function(prediction_function, feature_names)
+
+        self._validate_prediction_function(prediction_function)
+        self._validate_model_type(model_type)
+        classification_labels = self._validate_classification_labels(classification_labels, model_type)
+
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             self._validate_classification_threshold_label(classification_labels, classification_threshold)
+
+        assert feature_names is None or isinstance(feature_names, list), \
+            "Invalid feature_names parameter. Please provide the feature names as a list."
+
         if validate_df is not None:
+            self._verify_is_pandasdataframe(validate_df)
+            self._validate_features(feature_names=feature_names, validate_df=validate_df)
+
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
@@ -130,9 +136,10 @@ class GiskardProject:
                 self._validate_label_with_target(classification_labels, target_values)
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
                                                target=target)
-            else:
+            else:  # Classification with target = None
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
                                                target=target)
+
         model = self._serialize(transformed_pred_func)
         return classification_labels, model
 
@@ -300,16 +307,12 @@ class GiskardProject:
 
     @staticmethod
     def _validate_features(feature_names=None, validate_df=None):
-        if feature_names is not None:
-            if not isinstance(feature_names, list):
-                raise ValueError(
-                    f"Invalid feature_names parameter. Please provide the feature names as a list."
-                )
-            if validate_df is not None:
-                if not set(feature_names).issubset(set(validate_df.columns)):
-                    missing_feature_names = set(feature_names) - set(validate_df.columns)
-                    raise ValueError(
-                        f"Value mentioned in  feature_names is  not available in validate_df: {missing_feature_names} ")
+        if feature_names is not None \
+                and validate_df is not None \
+                and not set(feature_names).issubset(set(validate_df.columns)):
+            missing_feature_names = set(feature_names) - set(validate_df.columns)
+            raise ValueError(
+                f"Value mentioned in  feature_names is  not available in validate_df: {missing_feature_names} ")
 
     @staticmethod
     def _validate_classification_threshold_label(classification_labels, classification_threshold=None):
