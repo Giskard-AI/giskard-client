@@ -188,7 +188,7 @@ class GiskardProject:
         self._verify_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
-        self.validate_df(df, column_types)
+        self.validate_columns_columntypes(df, column_types)
         self._validate_column_types(column_types)
         self._verify_category_columns(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
@@ -410,7 +410,7 @@ class GiskardProject:
             raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
     @staticmethod
-    def validate_df(df: pd.DataFrame, column_types) -> pd.DataFrame:
+    def validate_columns_columntypes(df: pd.DataFrame, column_types) -> pd.DataFrame:
         if not set(column_types.keys()).issubset(set(df.columns)):
             missing_columns = set(column_types.keys()) - set(df.columns)
             raise ValueError(
