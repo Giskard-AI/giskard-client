@@ -300,7 +300,7 @@ class GiskardProject:
 
     @staticmethod
     def _validate_target(target, dataframe_keys):
-        if target is not None and target not in dataframe_keys:
+        if target not in dataframe_keys:
             raise ValueError(
                 f"Invalid target parameter:"
                 f" {target} column is not present in the dataset with columns:  {dataframe_keys}")
