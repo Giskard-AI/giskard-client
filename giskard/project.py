@@ -382,7 +382,8 @@ class GiskardProject:
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
         GiskardProject._verify_prediction_output(df, model_type, prediction)
-        GiskardProject._validate_classification_prediction(classification_labels, model_type, prediction)
+        if model_type == SupportedModelTypes.CLASSIFICATION.value:
+            GiskardProject._validate_classification_prediction(classification_labels, prediction)
 
     @staticmethod
     def _verify_prediction_output(df: pd.DataFrame, model_type, prediction):
@@ -399,15 +400,14 @@ class GiskardProject:
             raise ValueError("Model should return numpy array or a list")
 
     @staticmethod
-    def _validate_classification_prediction(classification_labels, model_type, prediction):
-        if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
-                raise ValueError(
-                    "Invalid Classification Model prediction. Output probabilities should be in range [0,1]")
-            if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
-                raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
-            if prediction.shape[1] != len(classification_labels):
-                raise ValueError("Prediction output label shape and classification_labels shape do not match")
+    def _validate_classification_prediction(classification_labels, prediction):
+        if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
+            raise ValueError(
+                "Invalid Classification Model prediction. Output probabilities should be in range [0,1]")
+        if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
+            raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
+        if prediction.shape[1] != len(classification_labels):
+            raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
     @staticmethod
     def validate_df(df: pd.DataFrame, column_types) -> pd.DataFrame:
