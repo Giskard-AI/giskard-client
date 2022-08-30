@@ -4,6 +4,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
 import requests
 from requests import Session
 
@@ -331,7 +332,7 @@ class GiskardProject:
     @staticmethod
     def _validate_label_with_target(classification_labels, target_values=None):
         if target_values is not None:
-            if not all(isinstance(item, str) for item in target_values):
+            if not is_string_dtype(target_values):
                 print('Hint: "Your target variable values are numeric. '
                       'It is recommended to have Human readable string as your target values '
                       'to make results more understandable in Giskard."')
