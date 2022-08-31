@@ -354,8 +354,7 @@ class GiskardProject:
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             if (
                     classification_labels is not None
-                    and hasattr(classification_labels, "__iter__")
-                    and not isinstance(classification_labels, (str, dict))  # type: ignore
+                    and isinstance(classification_labels, Iterable) # type: ignore
             ):
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
