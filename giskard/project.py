@@ -165,7 +165,7 @@ class GiskardProject:
         Returns:
                 Response of the upload
         """
-        data, raw_column_types = self._validate_data(column_types, df, target)
+        data, raw_column_types = self._validate_and_compress_data(column_types, df, target)
         result = self._post_data(column_types, data, name, raw_column_types, target)
         return result
 
@@ -192,7 +192,7 @@ class GiskardProject:
                              )
         return result
 
-    def _validate_data(self, column_types, df, target):
+    def _validate_and_compress_data(self, column_types, df, target):
         self._verify_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
@@ -257,7 +257,7 @@ class GiskardProject:
                     - Prefer using categorical values instead of numeric values in classification_labels
         """
         self.analytics.track("Upload model and dataset")
-        data, raw_column_types = self._validate_data(column_types, df, target)
+        data, raw_column_types = self._validate_and_compress_data(column_types, df, target)
         classification_labels, model = self._validate_model(classification_labels, classification_threshold,
                                                             feature_names, model_type, prediction_function, target,
                                                             df)
