@@ -342,7 +342,7 @@ class GiskardProject:
                       'It is recommended to have Human readable string as your target values '
                       'to make results more understandable in Giskard."')
 
-            target_values = target_values if isinstance(target_values, str) else [str(label) for label in target_values]
+            target_values = target_values if is_string_dtype(target_values) else [str(label) for label in target_values]
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
                 raise ValueError(f"Target column value {invalid_target_values} not declared in "
