@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from giskard.model import SupportedModelTypes
 from giskard.project import GiskardProject
 
 data = np.array(['g', 'e', 'e', 'k', 's'])
@@ -19,7 +18,6 @@ data = np.array(['g', 'e', 'e', 'k', 's'])
 def test__validate_classification_prediction_fail(pred):
     with pytest.raises(ValueError):
         GiskardProject._validate_classification_prediction(['one', 'two'],
-                                                           SupportedModelTypes.CLASSIFICATION.value,
                                                            np.array(pred))
 
 
@@ -29,7 +27,6 @@ def test__validate_classification_prediction_fail(pred):
 ])
 def test__validate_classification_prediction_pass(pred):
     GiskardProject._validate_classification_prediction(['one', 'two'],
-                                                       SupportedModelTypes.CLASSIFICATION.value,
                                                        np.array(pred))
 
 
