@@ -134,7 +134,7 @@ class GiskardProject:
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
-                self._validate_label_with_target(classification_labels, target_values)
+                self._validate_label_with_target(classification_labels, target_values, target)
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
                                                target=target)
             else:  # Classification with target = None
@@ -304,7 +304,7 @@ class GiskardProject:
         if target not in dataframe_keys:
             raise ValueError(
                 f"Invalid target parameter:"
-                f" {target} column is not present in the dataset with columns:  {dataframe_keys}")
+                f" {target} column is not present in the dataset with columns: {dataframe_keys}")
 
     @staticmethod
     def _validate_features(feature_names=None, validate_df=None):
@@ -335,7 +335,7 @@ class GiskardProject:
                     )
 
     @staticmethod
-    def _validate_label_with_target(classification_labels, target_values=None):
+    def _validate_label_with_target(classification_labels, target_values=None, target_name=None):
         if target_values is not None:
             if not is_string_dtype(target_values):
                 print('Hint: "Your target variable values are numeric. '
@@ -345,8 +345,8 @@ class GiskardProject:
             target_values = target_values if is_string_dtype(target_values) else [str(label) for label in target_values]
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
-                raise ValueError(f"Target column value {invalid_target_values} not declared in "
-                                 f"classification_labels list: {classification_labels}")
+                raise ValueError(f"Values in {target_name} column are not declared in "
+                                 f"classification_labels parameter: {invalid_target_values}")
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
