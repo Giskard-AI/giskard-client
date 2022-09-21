@@ -408,7 +408,7 @@ class GiskardProject:
             raise ValueError(
                 "Invalid Classification Model prediction. Output probabilities should be in range [0,1]")
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
-            raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
+            warnings.warn("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
         if prediction.shape[1] != len(classification_labels):
             raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
