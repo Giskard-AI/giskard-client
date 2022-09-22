@@ -9,6 +9,10 @@ data = np.array(['g', 'e', 'e', 'k', 's'])
 @pytest.mark.parametrize('pred', [
     [[0.81, 0.32]],
     [[0.9, 0.21]],
+    [[1.5, 1]],
+    [[-1, 2]],
+    [[0.9, -0.1]],
+    [[0, -1], [0.8, 0.5]]
 ])
 def test__validate_classification_prediction_warn(pred):
     with pytest.warns():
@@ -17,11 +21,7 @@ def test__validate_classification_prediction_warn(pred):
 
 
 @pytest.mark.parametrize('pred', [
-    [[1.5, 1]],
-    [[-1, 2]],
-    [[0.9, -0.1]],
     [[0.1, 0.2, 0.7]],
-    [[0, -1], [0.8, 0.5]]
 ])
 def test__validate_classification_prediction_fail(pred):
     with pytest.raises(ValueError):

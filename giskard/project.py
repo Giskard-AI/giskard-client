@@ -405,10 +405,11 @@ class GiskardProject:
     @staticmethod
     def _validate_classification_prediction(classification_labels, prediction):
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
-            raise ValueError(
-                "Invalid Classification Model prediction. Output probabilities should be in range [0,1]")
+            warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
+                          "The output of Multiclass classification should be within the range [0,1]")
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
-            warnings.warn("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
+            warnings.warn("Sum of output values of prediction_function is not equal to 1."
+                          " For Multiclass classification, the sum of probabilities should be 1")
         if prediction.shape[1] != len(classification_labels):
             raise ValueError("Prediction output label shape and classification_labels shape do not match")
 
