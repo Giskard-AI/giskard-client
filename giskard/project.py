@@ -453,8 +453,7 @@ class GiskardProject:
 
     def _verify_deterministic_model(self, small_df, prediction_function):
         """
-        The following test asserts if the model prediction does not
-        change when running prediction on the same data twice
+        Asserts if the model is deterministic by running prediction on the small data twice
         """
         iter1 = self._run_sample_prediction(small_df, prediction_function)
         iter2 = self._run_sample_prediction(small_df, prediction_function)
