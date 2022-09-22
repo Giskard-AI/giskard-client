@@ -49,9 +49,9 @@ def _test_prediction_function(data):
     return np.random.rand(5, 1)
 
 
-@pytest.mark.parametrize('data,prediction_function', [
-    (pd.DataFrame(data), _test_prediction_function)
+@pytest.mark.parametrize('data,prev_prediction,prediction_function', [
+    (pd.DataFrame(data), _test_prediction_function, _test_prediction_function)
 ])
-def test_validate_deterministic_model(data, prediction_function):
+def test_validate_deterministic_model(data, prev_prediction, prediction_function):
     with pytest.raises(AssertionError):
-        GiskardProject._validate_deterministic_model(data, prediction_function)
+        GiskardProject._validate_deterministic_model(data, prev_prediction, prediction_function)

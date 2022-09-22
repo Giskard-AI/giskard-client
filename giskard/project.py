@@ -383,7 +383,10 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
-        GiskardProject._validate_deterministic_model(df.head(), prediction_function)
+        min_num_rows = min(len(df), 5)
+        GiskardProject._validate_deterministic_model(df.head(min_num_rows),
+                                                     prediction[:min_num_rows],
+                                                     prediction_function)
         GiskardProject._validate_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
@@ -452,13 +455,12 @@ class GiskardProject:
         return prediction_function(small_df)
 
     @staticmethod
-    def _validate_deterministic_model(small_df, prediction_function):
+    def _validate_deterministic_model(sample_df, prev_prediction, prediction_function):
         """
         Asserts if the model is deterministic by running prediction on the small data twice
         """
-        iter1 = GiskardProject._run_sample_prediction(small_df, prediction_function)
-        iter2 = GiskardProject._run_sample_prediction(small_df, prediction_function)
-        assert np.array_equal(iter1, iter2), "Model is stochastic and not deterministic"
+        new_prediction = GiskardProject._run_sample_prediction(sample_df, prediction_function)
+        assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
