@@ -457,7 +457,7 @@ class GiskardProject:
     @staticmethod
     def _validate_deterministic_model(sample_df, prev_prediction, prediction_function):
         """
-        Asserts if the model is deterministic by running prediction on the small data twice
+        Asserts if the model is deterministic by asserting previous and current prediction on same data
         """
         new_prediction = GiskardProject._run_sample_prediction(sample_df, prediction_function)
         assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
