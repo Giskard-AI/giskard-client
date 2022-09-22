@@ -43,3 +43,15 @@ def test_verify_is_pandasdataframe_fail(data):
 ])
 def test_verify_is_pandasdataframe_pass(data):
     GiskardProject._validate_is_pandasdataframe(data)
+
+
+def _test_prediction_function(data):
+    return np.random.rand(5, 1)
+
+
+@pytest.mark.parametrize('data,prediction_function', [
+    (pd.DataFrame(data), _test_prediction_function)
+])
+def test_validate_deterministic_model(data, prediction_function):
+    with pytest.raises(AssertionError):
+        GiskardProject._validate_deterministic_model(data, prediction_function)
