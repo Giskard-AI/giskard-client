@@ -373,8 +373,7 @@ class GiskardProject:
             res = None
         return res
 
-    @staticmethod
-    def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
+    def _validate_model_execution(self, prediction_function, df: pd.DataFrame, model_type,
                                   classification_labels=None, target=None) -> None:
         try:
             if target is not None and target in df.columns:
@@ -384,6 +383,7 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
+        self._verify_deterministic_model(df.head(), prediction_function)
         GiskardProject._verify_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
@@ -446,6 +446,19 @@ class GiskardProject:
     @staticmethod
     def _verify_is_pandasdataframe(df):
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
+
+    @staticmethod
+    def _run_sample_prediction(small_df, prediction_function):
+        return prediction_function(small_df)
+
+    def _verify_deterministic_model(self, small_df, prediction_function):
+        """
+        The following test asserts if the model prediction does not
+        change when running prediction on the same data twice
+        """
+        iter1 = self._run_sample_prediction(small_df, prediction_function)
+        iter2 = self._run_sample_prediction(small_df, prediction_function)
+        assert np.array_equal(iter1, iter2), "Model is stochastic and not deterministic"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
