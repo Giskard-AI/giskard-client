@@ -126,7 +126,7 @@ class GiskardProject:
             "Invalid feature_names parameter. Please provide the feature names as a list."
 
         if validate_df is not None:
-            self._verify_is_pandasdataframe(validate_df)
+            self._validate_is_pandasdataframe(validate_df)
             self._validate_features(feature_names=feature_names, validate_df=validate_df)
 
             if model_type == SupportedModelTypes.REGRESSION.value:
@@ -193,12 +193,12 @@ class GiskardProject:
         return result
 
     def _validate_and_compress_data(self, column_types, df, target):
-        self._verify_is_pandasdataframe(df)
+        self._validate_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
         self.validate_columns_columntypes(df, column_types)
         self._validate_column_types(column_types)
-        self._verify_category_columns(df, column_types)
+        self._validate_category_columns(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
         data = compress(save_df(df))
         return data, raw_column_types
@@ -383,13 +383,13 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
-        self._verify_deterministic_model(df.head(), prediction_function)
-        GiskardProject._verify_prediction_output(df, model_type, prediction)
+        self._validate_deterministic_model(df.head(), prediction_function)
+        GiskardProject._validate_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
 
     @staticmethod
-    def _verify_prediction_output(df: pd.DataFrame, model_type, prediction):
+    def _validate_prediction_output(df: pd.DataFrame, model_type, prediction):
         assert len(df) == len(prediction), f"Number of rows ({len(df)}) of dataset provided does not match with the " \
                                            f"number of rows ({len(prediction)}) of prediction_function output"
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
@@ -437,21 +437,21 @@ class GiskardProject:
             return df
 
     @staticmethod
-    def _verify_category_columns(df: pd.DataFrame, column_types):
+    def _validate_category_columns(df: pd.DataFrame, column_types):
         for name, types in column_types.items():
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
                               f"necessary use 'numeric' or 'text' in column_types instead")
 
     @staticmethod
-    def _verify_is_pandasdataframe(df):
+    def _validate_is_pandasdataframe(df):
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
 
     @staticmethod
     def _run_sample_prediction(small_df, prediction_function):
         return prediction_function(small_df)
 
-    def _verify_deterministic_model(self, small_df, prediction_function):
+    def _validate_deterministic_model(self, small_df, prediction_function):
         """
         Asserts if the model is deterministic by running prediction on the small data twice
         """

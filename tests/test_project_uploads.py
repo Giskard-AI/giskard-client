@@ -35,11 +35,11 @@ def test__validate_classification_prediction_pass(pred):
 ])
 def test_verify_is_pandasdataframe_fail(data):
     with pytest.raises(AssertionError):
-        GiskardProject._verify_is_pandasdataframe(data)
+        GiskardProject._validate_is_pandasdataframe(data)
 
 
 @pytest.mark.parametrize('data', [
     pd.DataFrame(data)
 ])
 def test_verify_is_pandasdataframe_pass(data):
-    GiskardProject._verify_is_pandasdataframe(data)
+    GiskardProject._validate_is_pandasdataframe(data)
