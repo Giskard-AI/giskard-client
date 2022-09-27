@@ -61,6 +61,7 @@ class GiskardClient:
         response = self._session.get('projects').json()
         return [GiskardProject(self._session, p['key'], analytics=self.analytics) for p in response]
 
+
     def get_project(self, project_key: str):
         """
         Function to get the project that belongs to the mentioned project key
