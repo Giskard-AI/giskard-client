@@ -454,14 +454,14 @@ class GiskardProject:
             project_id = response_proj['id']
             response = self._session.get(f'testing/suites/{project_id}').json()
         except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
+            raise e
         return [GiskardTestSuite(self._session, ts['id'], ts['name'], ts['project']['id'], ts['referenceDataset']['id'], ts['actualDataset']['id']) for ts in response]
 
     def find_test_suite(self, id):
         try:
             response = self._session.get(f'testing/suites/{id}').json()
         except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
+            raise e
         return GiskardTestSuite(self._session, response['id'], response['name'], response['project']['id'], response['referenceDataset']['id'], response['actualDataset']['id'])
 
     def __repr__(self) -> str:

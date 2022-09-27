@@ -30,8 +30,6 @@ def test_get_and_execute_testsuite():
     httpretty.register_uri(
         httpretty.POST,
         f"http://giskard-host:12345/api/v2/testing/suites/execute",
-        content_type="application/json",
-        status=200
     )
 
     client = GiskardClient(url, token)
@@ -45,7 +43,8 @@ def test_get_and_execute_testsuite():
     assert list_ts[0].reference_dataset_id == 3
     assert list_ts[0].actual_dataset_id == 4
 
-    list_ts[0].execute()
+    with pytest.raises(Exception):
+        list_ts[0].execute()
 
     req = httpretty.last_request()
     assert req.headers.get('Authorization') == auth

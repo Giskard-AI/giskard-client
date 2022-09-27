@@ -29,9 +29,10 @@ class GiskardTestSuite:
         }
         execute_res = ""
         try:
-            execute_res = self.session.post("<testing/suites/execute>", json=data, headers=headers).json()
+            execute_res = self.session.post("testing/suites/execute", json=data, headers=headers).json()
+            print(execute_res)
         except requests.exceptions.RequestException as e:
-            SystemExit(e)
+            raise e
         return [GiskardTestExecutionResult(ter['testId'], Status(ter['status']), ter['result'][0]['name']) for ter in execute_res]
 
     def __repr__(self) -> str:
