@@ -8,6 +8,7 @@ from pandas.api.types import is_string_dtype
 import requests
 from requests import Session
 
+from giskard.test_suite import GiskardTestSuite
 from giskard.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.io_utils import compress, pickle_dumps, save_df
 from giskard.model import SupportedModelTypes, SupportedColumnType
@@ -446,6 +447,22 @@ class GiskardProject:
     @staticmethod
     def _verify_is_pandasdataframe(df):
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
+
+    def list_test_suite(self):
+        try:
+            response_proj = self._session.get(f'project?key={self.project_key}').json()
+            project_id = response_proj['id']
+            response = self._session.get(f'testing/suites/{project_id}').json()
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+        return [GiskardTestSuite(self._session, ts['id'], ts['name'], ts['project']['id'], ts['referenceDataset']['id'], ts['actualDataset']['id']) for ts in response]
+
+    def find_test_suite(self, id):
+        try:
+            response = self._session.get(f'testing/suites/{id}').json()
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+        return GiskardTestSuite(self._session, response['id'], response['name'], response['project']['id'], response['referenceDataset']['id'], response['actualDataset']['id'])
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
