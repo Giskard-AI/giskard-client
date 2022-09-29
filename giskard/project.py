@@ -354,7 +354,7 @@ class GiskardProject:
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             if (
                     classification_labels is not None
-                    and isinstance(classification_labels, Iterable) # type: ignore
+                    and isinstance(classification_labels, Iterable)  # type: ignore
             ):
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
@@ -451,15 +451,11 @@ class GiskardProject:
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
 
     @staticmethod
-    def _run_sample_prediction(small_df, prediction_function):
-        return prediction_function(small_df)
-
-    @staticmethod
     def _validate_deterministic_model(sample_df, prev_prediction, prediction_function):
         """
         Asserts if the model is deterministic by asserting previous and current prediction on same data
         """
-        new_prediction = GiskardProject._run_sample_prediction(sample_df, prediction_function)
+        new_prediction = prediction_function(sample_df)
         assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
 
     def __repr__(self) -> str:
