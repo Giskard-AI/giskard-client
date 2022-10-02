@@ -34,7 +34,8 @@ input_types = {'account_check_status': "category",
                'job': "category",
                'people_under_maintenance': "numeric",
                'telephone': "category",
-               'foreign_worker': "category"}
+               'foreign_worker': "category",
+               'default': "category"}
 
 
 @pytest.fixture()
@@ -48,13 +49,15 @@ def german_credit_data():
 @pytest.fixture()
 def german_credit_model(german_credit_data) -> GiskardModel:
     start = time.time()
-    df, input_types, target = german_credit_data
-    columns_to_scale = [key for key in input_types.keys() if input_types[key] == "numeric"]
+    df, column_types, target = german_credit_data
+    feature_types = {i: column_types[i] for i in column_types if i != 'default'}
+
+    columns_to_scale = [key for key in feature_types.keys() if feature_types[key] == "numeric"]
 
     numeric_transformer = Pipeline([('imputer', SimpleImputer(strategy='median')),
                                     ('scaler', StandardScaler())])
 
-    columns_to_encode = [key for key in input_types.keys() if input_types[key] == "category"]
+    columns_to_encode = [key for key in feature_types.keys() if feature_types[key] == "category" and key != "default"]
 
     categorical_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
@@ -84,7 +87,7 @@ def german_credit_model(german_credit_data) -> GiskardModel:
     return GiskardModel(
         prediction_function=clf.predict_proba,
         model_type='classification',
-        feature_names=list(input_types),
+        feature_names=list(feature_types),
         classification_threshold=0.5,
         classification_labels=clf.classes_
     )
