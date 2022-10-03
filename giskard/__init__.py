@@ -3,6 +3,8 @@
 
 import sys
 
+from giskard.client.giskard_client import GiskardClient
+
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
 else:
@@ -17,5 +19,3 @@ def get_version() -> str:
 
 
 __version__ = get_version()
-
-from .giskard_client import GiskardClient
