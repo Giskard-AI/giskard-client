@@ -87,9 +87,10 @@ COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 COPY ./giskard /app/giskard
 
 WORKDIR /app
-COPY --from=proto-builder /app/generated ./generated
+COPY --from=proto-builder /app/generated /app/giskard/ml_worker/generated
 
 ENV GSK_HOST=0.0.0.0
+ENV PYTHONPATH=.
 
-CMD ["python", "cli.py", "worker", "start"]
+CMD ["python", "giskard/cli.py", "worker", "start"]
 EXPOSE 50051

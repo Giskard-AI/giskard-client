@@ -6,6 +6,10 @@ PYTHON := python
 IMAGE := docker.io/giskardai/ml-worker
 VERSION := dev
 
+
+.PHONY: all
+all: clean poetry-download install-dependencies generate-proto test
+
 #* Poetry
 .PHONY: poetry-download
 poetry-download:
@@ -15,12 +19,30 @@ poetry-download:
 poetry-remove:
 	curl -sSL https://install.python-poetry.org | $(PYTHON) - --uninstall
 
+.PHONY: install-dependencies
+install-dependencies:
+	poetry install
+
 #* Installation
 .PHONY: install
-install:
-	poetry lock -n && poetry export --without-hashes > requirements.txt
-	poetry install -n
-	-poetry run mypy --install-types --non-interactive ./
+install: install-dependencies generate-proto
+
+
+GENERATED_OUT:=giskard/ml_worker/generated
+.PHONY: generate-proto
+generate-proto:
+	rm -rf $(GENERATED_OUT) && mkdir -p $(GENERATED_OUT) && \
+	source .venv/bin/activate && \
+	python -m grpc_tools.protoc \
+      -Iml-worker-proto/proto \
+      --python_out=$(GENERATED_OUT) \
+      --grpc_python_out=$(GENERATED_OUT) \
+      --mypy_out=$(GENERATED_OUT) \
+      ml-worker-proto/proto/ml-worker.proto
+
+.PHONY: proto-remove
+proto-remove:
+	rm -rf $(GENERATED_OUT)
 
 .PHONY: pre-commit-install
 pre-commit-install:
@@ -93,5 +115,8 @@ pycache-remove:
 build-remove:
 	rm -rf build/
 
+.PHONY: clean
+clean: pycache-remove build-remove proto-remove
+
 .PHONY: clean-all
-clean-all: pycache-remove build-remove docker-remove
+clean-all: clean docker-remove
