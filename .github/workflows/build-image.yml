@@ -1,0 +1,49 @@
+name: Build ML Worker Docker image and push to registry with dev tag
+
+on:
+  push:
+    branches:
+      - feature/external-ml-worker
+  pull_request:
+    branches:
+      - feature/external-ml-worker
+  workflow_dispatch:
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Build ML Worker image
+        env:
+          TAG: dev
+        run: make docker-build
+
+      - name: Login to Docker registry
+        uses: docker/login-action@v2
+        if: ${{ steps.extract_branch.outputs.branch == 'feature/external-ml-worker' }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push ML Worker image to Docker registry
+        if: ${{ steps.extract_branch.outputs.branch == 'feature/external-ml-worker' }}
+        env:
+          TAG: dev
+        run: make docker-push
+
+      - name: Invoke deployment hook
+        run: |
+          curl -L --silent --max-time 900 ${{ secrets.TEST_SERVER_WEBHOOK_URL_BASE }}/redeploy-dev 
+
+      - name: Remove containers and volumes
+        run: docker system prune -a -f
+
+

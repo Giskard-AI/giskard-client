@@ -4,6 +4,9 @@
 import sys
 
 from giskard.client.giskard_client import GiskardClient
+from giskard.ml_worker.utils.logging import configure_logging
+
+configure_logging()
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -18,4 +21,4 @@ def get_version() -> str:
         return "unknown"
 
 
-__version__ = get_version()
+__version__: str = get_version()

@@ -3,17 +3,17 @@ SHELL := /usr/bin/env bash
 PYTHON := python
 
 #* Docker variables
-IMAGE := giskard_client
-VERSION := latest
+IMAGE := docker.io/giskardai/ml-worker
+VERSION := dev
 
 #* Poetry
 .PHONY: poetry-download
 poetry-download:
-	curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | $(PYTHON) -
+	curl -sSL https://install.python-poetry.org | $(PYTHON) -
 
 .PHONY: poetry-remove
 poetry-remove:
-	curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | $(PYTHON) - --uninstall
+	curl -sSL https://install.python-poetry.org | $(PYTHON) - --uninstall
 
 #* Installation
 .PHONY: install
@@ -45,7 +45,7 @@ test:
 check-codestyle:
 	poetry run isort --diff --check-only --settings-path pyproject.toml ./
 	poetry run black --diff --check --config pyproject.toml ./
-	poetry run darglint --verbosity 2 giskard_client tests
+	poetry run darglint --verbosity 2 giskard tests
 
 .PHONY: mypy
 mypy:
@@ -55,13 +55,13 @@ mypy:
 check-safety:
 	poetry check
 	poetry run safety check --full-report
-	poetry run bandit -ll --recursive giskard_client tests
+	poetry run bandit -ll --recursive giskard tests
 
 .PHONY: lint
 lint: test check-codestyle mypy check-safety
 
 #* Docker
-# Example: make docker VERSION=latest
+# Example: make docker VERSION=dev
 # Example: make docker IMAGE=some_name VERSION=0.1.0
 .PHONY: docker-build
 docker-build:
@@ -70,12 +70,19 @@ docker-build:
 		-t $(IMAGE):$(VERSION) . \
 		-f ./docker/Dockerfile --no-cache
 
-# Example: make clean_docker VERSION=latest
+# Example: make clean_docker VERSION=dev
 # Example: make clean_docker IMAGE=some_name VERSION=0.1.0
 .PHONY: docker-remove
 docker-remove:
 	@echo Removing docker $(IMAGE):$(VERSION) ...
 	docker rmi -f $(IMAGE):$(VERSION)
+
+# Example: make clean_docker VERSION=dev
+# Example: make clean_docker IMAGE=some_name VERSION=0.1.0
+.PHONY: docker-push
+docker-push:
+	@echo Pushing docker $(IMAGE):$(VERSION) ...
+	docker image push $(IMAGE):$(VERSION)
 
 #* Cleaning
 .PHONY: pycache-remove
