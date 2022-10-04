@@ -131,7 +131,6 @@ class GiskardProject:
 
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
