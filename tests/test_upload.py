@@ -52,9 +52,9 @@ def test_upload_df(diabetes_dataset):
 
     multipart_data = decoder.MultipartDecoder(req.body, req.headers.get('Content-Type'))
     assert len(multipart_data.parts) == 2
-    meta, file = multipart_data.parts
+    meta, file_data = multipart_data.parts
     assert meta.headers.get(b'Content-Type') == b_content_type
-    pd.testing.assert_frame_equal(df, pd.read_csv(BytesIO(decompress(file.content))))
+    pd.testing.assert_frame_equal(df, pd.read_csv(BytesIO(decompress(file_data.content))))
 
 
 @httpretty.activate(verbose=True, allow_net_connect=False)
