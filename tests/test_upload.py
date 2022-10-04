@@ -49,10 +49,10 @@ def test_upload_df(diabetes_dataset: GiskardDataset):
 
     multipart_data = decoder.MultipartDecoder(req.body, req.headers.get("Content-Type"))
     assert len(multipart_data.parts) == 2
-    meta, file = multipart_data.parts
+    meta, upload_file = multipart_data.parts
     assert meta.headers.get(b"Content-Type") == b_content_type
     pd.testing.assert_frame_equal(
-        diabetes_dataset.df, pd.read_csv(BytesIO(decompress(file.content)))
+        diabetes_dataset.df, pd.read_csv(BytesIO(decompress(upload_file.content)))
     )
 
 
