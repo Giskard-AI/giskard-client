@@ -3,10 +3,10 @@ name: Build ML Worker Docker image and push to registry with dev tag
 on:
   push:
     branches:
-      - feature/external-ml-worker
+      - main
   pull_request:
     branches:
-      - feature/external-ml-worker
+      - main
   workflow_dispatch:
 
 jobs:
@@ -30,13 +30,13 @@ jobs:
 
       - name: Login to Docker registry
         uses: docker/login-action@v2
-        if: ${{ steps.extract_branch.outputs.branch == 'feature/external-ml-worker' }}
+        if: ${{ steps.extract_branch.outputs.branch == 'main' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push ML Worker image to Docker registry
-        if: ${{ steps.extract_branch.outputs.branch == 'feature/external-ml-worker' }}
+        if: ${{ steps.extract_branch.outputs.branch == 'main' }}
         env:
           TAG: dev
         run: make docker-push
