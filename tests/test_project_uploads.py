@@ -43,3 +43,14 @@ def test_verify_is_pandasdataframe_fail(data):
 ])
 def test_verify_is_pandasdataframe_pass(data):
     GiskardProject._verify_is_pandasdataframe(data)
+
+
+def _test_prediction_function(data):
+    return np.random.rand(5, 1)
+
+
+@pytest.mark.parametrize('data,prev_prediction,prediction_function', [
+    (pd.DataFrame(data), _test_prediction_function, _test_prediction_function)
+])
+def test_validate_prediction_single_row(data, prev_prediction, prediction_function):
+    GiskardProject._validate_prediction_single_row(prediction_function, data)
