@@ -86,5 +86,5 @@ WORKDIR $PYSETUP_PATH
 ENV GSK_HOST=0.0.0.0
 ENV PYTHONPATH=.
 
-CMD ["python", "giskard/cli.py", "worker", "start"]
+CMD ["python", "giskard/cli.py", "worker", "start", "-s"]
 EXPOSE 50051
