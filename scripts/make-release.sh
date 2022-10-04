@@ -8,7 +8,8 @@ die () {
 }
 
 [ "$#" -eq 1 ] || die "1 argument required, $# provided"
-echo $1 | grep -E -q '^[0-9]+\.[0-9]+\.[0-9]+$' || die "Version should match ^[0-9]+\.[0-9]+\.[0-9]+$, $1 provided"
+echo $1 | grep -E -q '^[0-9]+\.[0-9]+\.[0-9]+([ab]\d+)?$' ||
+  die "Version should match '^[0-9]+\.[0-9]+\.[0-9]+([ab]\d+)?$', $1 provided"
 
 if [ -n "$1" ]; then
   git stash || true

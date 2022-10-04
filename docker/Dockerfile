@@ -27,9 +27,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYSETUP_PATH="/opt/pysetup" \
     VENV_PATH="/opt/pysetup/.venv"
 
-
-# prepend poetry and venv to path
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+ENV PATH="$VENV_PATH/bin:$POETRY_HOME/bin:$PATH"
 
 
 # `builder-base` stage is used to build deps + create our virtual environment
@@ -38,9 +36,7 @@ FROM python-base as builder-base
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         git \
-        # deps for installing poetry
         curl \
-        # deps for building python deps
         build-essential
 
 RUN pip install --upgrade pip
@@ -55,7 +51,9 @@ COPY pyproject.toml poetry.lock ./
 # install deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 # Allow installing dev dependencies to run tests
 ARG INSTALL_DEV=false
-RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --no-dev ; fi"
+RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --only main ; fi"
+
+
 
 # ------------------------------------------------------------------------
 # Add your python dependencies here, for example
@@ -64,30 +62,26 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 
 
 FROM builder-base as proto-builder
+
 WORKDIR $PYSETUP_PATH
 # install dev dependencies needed to protobuf code generation
-RUN poetry install
+RUN poetry install --with main,dev
 
 # copy makefile and proto to generate python sources
-WORKDIR /app
+COPY ./giskard ./giskard
+COPY ./ml-worker-proto ./ml-worker-proto
+COPY ./scripts ./scripts
+COPY ./Makefile ./
 
-RUN mkdir "generated"
-COPY ./ml-worker-proto/proto proto
+RUN make generate-proto
 
-RUN python3 -m grpc_tools.protoc \
-      -Iproto \
-      --python_out=generated \
-      --grpc_python_out=generated \
-      --mypy_out=generated \
-      proto/ml-worker.proto
 
 # `production` image used for runtime
 FROM python-base as production
-COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
-COPY ./giskard /app/giskard
+COPY --from=builder-base $VENV_PATH $VENV_PATH
+COPY --from=proto-builder $PYSETUP_PATH/giskard $PYSETUP_PATH/giskard
 
-WORKDIR /app
-COPY --from=proto-builder /app/generated /app/giskard/ml_worker/generated
+WORKDIR $PYSETUP_PATH
 
 ENV GSK_HOST=0.0.0.0
 ENV PYTHONPATH=.

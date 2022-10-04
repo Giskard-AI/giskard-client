@@ -38,7 +38,8 @@ generate-proto:
       --python_out=$(GENERATED_OUT) \
       --grpc_python_out=$(GENERATED_OUT) \
       --mypy_out=$(GENERATED_OUT) \
-      ml-worker-proto/proto/ml-worker.proto
+      ml-worker-proto/proto/ml-worker.proto && \
+    python scripts/fix_grpc_generated_imports.py $(GENERATED_OUT) giskard.ml_worker.generated
 
 .PHONY: proto-remove
 proto-remove:
@@ -87,6 +88,13 @@ lint: test check-codestyle mypy check-safety
 # Example: make docker IMAGE=some_name VERSION=0.1.0
 .PHONY: docker-build
 docker-build:
+	@echo Building docker $(IMAGE):$(VERSION) ...
+	docker build \
+		-t $(IMAGE):$(VERSION) . \
+		-f ./docker/Dockerfile
+
+.PHONY: docker-build
+docker-build-nocache:
 	@echo Building docker $(IMAGE):$(VERSION) ...
 	docker build \
 		-t $(IMAGE):$(VERSION) . \
