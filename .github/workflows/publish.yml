@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Make
+        run: make
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.11
         with:

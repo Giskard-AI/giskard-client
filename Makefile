@@ -27,6 +27,10 @@ install-dependencies:
 .PHONY: install
 install: install-dependencies generate-proto
 
+.PHONY: build
+build: install
+	poetry build
+
 
 GENERATED_OUT:=giskard/ml_worker/generated
 .PHONY: generate-proto
@@ -62,7 +66,7 @@ formatting: codestyle
 #* Linting
 .PHONY: test
 test:
-	poetry run pytest -c pyproject.toml
+	poetry run pytest -c pyproject.toml --cov=giskard tests --cov-report=xml
 
 .PHONY: check-codestyle
 check-codestyle:
@@ -119,12 +123,17 @@ docker-push:
 pycache-remove:
 	find . | grep -E "(__pycache__|\.pyc|\.pyo$$)" | xargs rm -rf
 
+#* Cleaning
+.PHONY: coverage-remove
+coverage-remove:
+	rm -rf htmlcov coverage.xml
+
 .PHONY: build-remove
 build-remove:
-	rm -rf build/
+	rm -rf build dist
 
 .PHONY: clean
-clean: pycache-remove build-remove proto-remove
+clean: pycache-remove build-remove proto-remove coverage-remove
 
 .PHONY: clean-all
 clean-all: clean docker-remove
