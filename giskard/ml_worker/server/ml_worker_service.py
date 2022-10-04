@@ -185,18 +185,15 @@ class MLWorkerServiceImpl(MLWorkerServicer):
             dataset = deserialize_dataset(request.dataset)
         except ValueError as e:
             if "unsupported pickle protocol" in str(e):
-                raise ValueError(
-                    "Unable to unpickle object, "
-                    "check that Python version of client code is the same as in ML Worker."
-                    f"\nOriginal Error: {e}"
-                ) from e
+                raise ValueError('Unable to unpickle object, '
+                                 'Make sure that Python version of client code is the same as the Python version in ML Worker.'
+                                 'To change Python version, please refer to https://docs.giskard.ai/start/guides/configuration'
+                                 f'\nOriginal Error: {e}') from e
             raise e
         except ModuleNotFoundError as e:
-            raise GiskardException(
-                f"Failed to import '{e.name}'. "
-                f"Make sure it's installed in the ML Worker environment."
-                "To install it, refer to https://docs.giskard.ai/"
-            ) from e
+            raise GiskardException(f"Failed to import '{e.name}'. "
+                                   f"Make sure it's installed in the ML Worker environment."
+                                   "To install it, refer to https://docs.giskard.ai/start/guides/configuration") from e
         prediction_results = model.run_predict(dataset)
 
         if model.model_type == "classification":
@@ -211,7 +208,7 @@ class MLWorkerServiceImpl(MLWorkerServicer):
                 )
             else:
                 diff = (
-                    prediction_results.all_predictions.iloc[:, 1] - model.classification_threshold
+                        prediction_results.all_predictions.iloc[:, 1] - model.classification_threshold
                 )
                 preds_serie = (diff >= 0).astype(int).map(labels).rename("predictions")
                 abs_diff = pd.Series(diff.abs(), name="absDiff")
