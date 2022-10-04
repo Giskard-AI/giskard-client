@@ -131,6 +131,7 @@ class GiskardProject:
 
             if model_type == SupportedModelTypes.REGRESSION.value:
                 self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
+                self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
@@ -354,7 +355,7 @@ class GiskardProject:
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             if (
                     classification_labels is not None
-                    and isinstance(classification_labels, Iterable) # type: ignore
+                    and isinstance(classification_labels, Iterable)  # type: ignore
             ):
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
@@ -376,16 +377,22 @@ class GiskardProject:
     @staticmethod
     def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
                                   classification_labels=None, target=None) -> None:
+        if target is not None and target in df.columns:
+            df = df.drop(target, axis=1)
+
         try:
-            if target is not None and target in df.columns:
-                df = df.drop(target, axis=1)
+            prediction_function(df.head(1))
+        except Exception:
+            raise ValueError("Prediction function doesn't work for a dataset containing 1 row")
+
+        try:
             prediction = prediction_function(df)
         except Exception:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
 
-        GiskardProject._validate_prediction_single_row(prediction_function, df.head(1))
+        # GiskardProject._validate_prediction_single_row(prediction_function, df.head(1))
         GiskardProject._verify_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
