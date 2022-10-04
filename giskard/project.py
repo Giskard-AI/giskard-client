@@ -384,6 +384,8 @@ class GiskardProject:
             raise ValueError("Invalid prediction_function input.\n"
                              "Please make sure that prediction_function(df[feature_names]) does not return an error "
                              "message before uploading in Giskard")
+
+        GiskardProject._validate_prediction_single_row(prediction_function, df.head(1))
         GiskardProject._verify_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
@@ -446,6 +448,13 @@ class GiskardProject:
     @staticmethod
     def _verify_is_pandasdataframe(df):
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
+
+    @staticmethod
+    def _validate_prediction_single_row(prediction_function, df):
+        try:
+            prediction_function(df.head(1))
+        except Exception:
+            raise ValueError("Prediction function doesn't work for a dataset containing 1 row")
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
