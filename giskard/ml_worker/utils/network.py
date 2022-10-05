@@ -1,4 +1,5 @@
 import codecs
+import os
 import socket
 from contextlib import closing
 
@@ -11,5 +12,7 @@ def find_free_port():
 
 
 def readable_hex(data):
+    if not os.environ.get("GSK_ML_WORKER_LOG_HEX", False):
+        return ""
     s = codecs.encode(data, "hex").decode()
-    return " ".join(s[i : i + 2] for i in range(0, len(s), 2))
+    return " ".join(s[i: i + 2] for i in range(0, len(s), 2))
