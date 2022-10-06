@@ -63,6 +63,7 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
     if model.model_type == "regression":
+        # Warning Scenario: classification_labels is sent for regression model
         with pytest.warns(UserWarning):
             project.upload_model(
                 prediction_function=model.prediction_function,
@@ -82,14 +83,6 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
             classification_labels=model.classification_labels,
         )
 
-    with pytest.raises(Exception):
-        project.upload_model(
-            prediction_function=model.prediction_function,
-            model_type=model.model_type,
-            feature_names=ds.feature_types,
-            name=model_name,
-            validate_df=ds.df,
-        )
     req = httpretty.last_request()
     assert req.headers.get("Authorization") == auth
     assert int(req.headers.get("Content-Length")) > 0
