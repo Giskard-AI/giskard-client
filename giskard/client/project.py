@@ -4,28 +4,32 @@ from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_string_dtype
 import requests
-from requests import Session
+from pandas.api.types import is_string_dtype
+from requests_toolbelt.sessions import BaseUrlSession
 
-from giskard.analytics_collector import GiskardAnalyticsCollector, anonymize
-from giskard.io_utils import compress, pickle_dumps, save_df
-from giskard.model import SupportedModelTypes, SupportedColumnType
-from giskard.python_utils import get_python_requirements, get_python_version
+from giskard.client.analytics_collector import GiskardAnalyticsCollector, anonymize
+from giskard.client.io_utils import compress, pickle_dumps, save_df
+from giskard.client.model import SupportedColumnType, SupportedModelTypes
+from giskard.client.python_utils import get_python_requirements, get_python_version
 
 
 class GiskardProject:
-    def __init__(self, session: Session, project_key: str, analytics: GiskardAnalyticsCollector = None) -> None:
+    def __init__(
+            self, session: BaseUrlSession, project_key: str, analytics: GiskardAnalyticsCollector = None
+    ) -> None:
         self.project_key = project_key
         self._session = session
         self.url = self._session.base_url.replace("/api/v2/", "")
         self.analytics = analytics or GiskardAnalyticsCollector()
 
     @staticmethod
-    def _serialize(prediction_function: Callable[
-        [pd.DataFrame],
-        Iterable[Union[str, float, int]],
-    ]) -> bytes:
+    def _serialize(
+            prediction_function: Callable[
+                [pd.DataFrame],
+                Iterable[Union[str, float, int]],
+            ]
+    ) -> bytes:
         compressed_pickle: bytes = compress(pickle_dumps(prediction_function))
         return compressed_pickle
 
@@ -76,12 +80,28 @@ class GiskardProject:
                     - Make sure the labels have the same order as the output of prediction_function
                     - Prefer using categorical values instead of numeric values in classification_labels
         """
-        classification_labels, model = self._validate_model(classification_labels, classification_threshold,
-                                                            feature_names, model_type, prediction_function, target,
-                                                            validate_df)
-        self._post_model(classification_labels, classification_threshold, feature_names, model, model_type, name)
+        classification_labels, model = self._validate_model(
+            classification_labels,
+            classification_threshold,
+            feature_names,
+            model_type,
+            prediction_function,
+            target,
+            validate_df,
+        )
+        self._post_model(
+            classification_labels, classification_threshold, feature_names, model, model_type, name
+        )
 
-    def _post_model(self, classification_labels, classification_threshold, feature_names, model, model_type, name):
+    def _post_model(
+            self,
+            classification_labels,
+            classification_threshold,
+            feature_names,
+            model,
+            model_type,
+            name,
+    ):
         requirements = get_python_requirements()
         params = {
             "name": name,
@@ -91,55 +111,87 @@ class GiskardProject:
             "threshold": classification_threshold,
             "featureNames": feature_names,
             "language": "PYTHON",
-            "classificationLabels": classification_labels
+            "classificationLabels": classification_labels,
         }
         files = [
-            ('metadata', (None, json.dumps(params), 'application/json')),
-            ('modelFile', model),
-            ('requirementsFile', requirements)
+            ("metadata", (None, json.dumps(params), "application/json")),
+            ("modelFile", model),
+            ("requirementsFile", requirements),
         ]
-        self._session.post('project/models/upload', data={}, files=files)
-        self.analytics.track("Upload Model", {
-            "name": anonymize(name),
-            "projectKey": anonymize(self.project_key),
-            "languageVersion": get_python_version(),
-            "modelType": model_type,
-            "threshold": classification_threshold,
-            "featureNames": anonymize(feature_names),
-            "language": "PYTHON",
-            "classificationLabels": anonymize(classification_labels)
-        })
-        print(f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
+        self._session.post("project/models/upload", data={}, files=files)
+        self.analytics.track(
+            "Upload Model",
+            {
+                "name": anonymize(name),
+                "projectKey": anonymize(self.project_key),
+                "languageVersion": get_python_version(),
+                "modelType": model_type,
+                "threshold": classification_threshold,
+                "featureNames": anonymize(feature_names),
+                "language": "PYTHON",
+                "classificationLabels": anonymize(classification_labels),
+            },
+        )
+        print(
+            f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} "
+        )
 
-    def _validate_model(self, classification_labels, classification_threshold, feature_names, model_type,
-                        prediction_function, target, validate_df):
-        transformed_pred_func = self.transform_prediction_function(prediction_function, feature_names)
+    def _validate_model(
+            self,
+            classification_labels,
+            classification_threshold,
+            feature_names,
+            model_type,
+            prediction_function,
+            target,
+            validate_df,
+    ):
+        transformed_pred_func = self.transform_prediction_function(
+            prediction_function, feature_names
+        )
 
         self._validate_prediction_function(prediction_function)
         self._validate_model_type(model_type)
-        classification_labels = self._validate_classification_labels(classification_labels, model_type)
+        classification_labels = self._validate_classification_labels(
+            classification_labels, model_type
+        )
 
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            self._validate_classification_threshold_label(classification_labels, classification_threshold)
+            self._validate_classification_threshold_label(
+                classification_labels, classification_threshold
+            )
 
-        assert feature_names is None or isinstance(feature_names, list), \
-            "Invalid feature_names parameter. Please provide the feature names as a list."
+        assert feature_names is None or isinstance(
+            feature_names, list
+        ), "Invalid feature_names parameter. Please provide the feature names as a list."
 
         if validate_df is not None:
             self._verify_is_pandasdataframe(validate_df)
             self._validate_features(feature_names=feature_names, validate_df=validate_df)
 
             if model_type == SupportedModelTypes.REGRESSION.value:
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, target=target)
+                self._validate_model_execution(
+                    transformed_pred_func, validate_df, model_type, target=target
+                )
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
                 self._validate_label_with_target(classification_labels, target_values)
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
-                                               target=target)
+                self._validate_model_execution(
+                    transformed_pred_func,
+                    validate_df,
+                    model_type,
+                    classification_labels,
+                    target=target,
+                )
             else:  # Classification with target = None
-                self._validate_model_execution(transformed_pred_func, validate_df, model_type, classification_labels,
-                                               target=target)
+                self._validate_model_execution(
+                    transformed_pred_func,
+                    validate_df,
+                    model_type,
+                    classification_labels,
+                    target=target,
+                )
 
         model = self._serialize(transformed_pred_func)
         return classification_labels, model
@@ -175,21 +227,22 @@ class GiskardProject:
             "name": name,
             "featureTypes": column_types,
             "columnTypes": raw_column_types,
-            "target": target
+            "target": target,
         }
-        files = [
-            ('metadata', (None, json.dumps(params), 'application/json')),
-            ('file', data)
-        ]
+        files = [("metadata", (None, json.dumps(params), "application/json")), ("file", data)]
         result = self._session.post("project/data/upload", data={}, files=files)
-        print(f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} ")
-        self.analytics.track("Upload dataset", {
-            "projectKey": anonymize(self.project_key),
-            "name": anonymize(name),
-            "featureTypes": anonymize(column_types),
-            "target": anonymize(target)
-        }
-                             )
+        print(
+            f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} "
+        )
+        self.analytics.track(
+            "Upload dataset",
+            {
+                "projectKey": anonymize(self.project_key),
+                "name": anonymize(name),
+                "featureTypes": anonymize(column_types),
+                "target": anonymize(target),
+            },
+        )
         return result
 
     def _validate_and_compress_data(self, column_types, df, target):
@@ -258,11 +311,24 @@ class GiskardProject:
         """
         self.analytics.track("Upload model and dataset")
         data, raw_column_types = self._validate_and_compress_data(column_types, df, target)
-        classification_labels, model = self._validate_model(classification_labels, classification_threshold,
-                                                            feature_names, model_type, prediction_function, target,
-                                                            df)
+        classification_labels, model = self._validate_model(
+            classification_labels,
+            classification_threshold,
+            feature_names,
+            model_type,
+            prediction_function,
+            target,
+            df,
+        )
         self._post_data(column_types, data, dataset_name, raw_column_types, target)
-        self._post_model(classification_labels, classification_threshold, feature_names, model, model_type, model_name)
+        self._post_model(
+            classification_labels,
+            classification_threshold,
+            feature_names,
+            model,
+            model_type,
+            model_name,
+        )
 
     @staticmethod
     def _validate_model_type(model_type):
@@ -275,7 +341,9 @@ class GiskardProject:
     @staticmethod
     def _validate_column_types(column_types):
         if column_types and isinstance(column_types, dict):
-            if not set(column_types.values()).issubset(set(column_type.value for column_type in SupportedColumnType)):
+            if not set(column_types.values()).issubset(
+                    set(column_type.value for column_type in SupportedColumnType)
+            ):
                 raise ValueError(
                     f"Invalid column_types parameter: "
                     + f"Please choose types among {[column_type.value for column_type in SupportedColumnType]}."
@@ -304,24 +372,30 @@ class GiskardProject:
         if target not in dataframe_keys:
             raise ValueError(
                 f"Invalid target parameter:"
-                f" {target} column is not present in the dataset with columns:  {dataframe_keys}")
+                f" {target} column is not present in the dataset with columns:  {dataframe_keys}"
+            )
 
     @staticmethod
     def _validate_features(feature_names=None, validate_df=None):
-        if feature_names is not None \
-                and validate_df is not None \
-                and not set(feature_names).issubset(set(validate_df.columns)):
+        if (
+                feature_names is not None
+                and validate_df is not None
+                and not set(feature_names).issubset(set(validate_df.columns))
+        ):
             missing_feature_names = set(feature_names) - set(validate_df.columns)
             raise ValueError(
-                f"Value mentioned in  feature_names is  not available in validate_df: {missing_feature_names} ")
+                f"Value mentioned in  feature_names is  not available in validate_df: {missing_feature_names} "
+            )
 
     @staticmethod
-    def _validate_classification_threshold_label(classification_labels, classification_threshold=None):
+    def _validate_classification_threshold_label(
+            classification_labels, classification_threshold=None
+    ):
         if classification_labels is None:
-            raise ValueError(
-                f"Missing classification_labels parameter for classification model."
-            )
-        if classification_threshold is not None and not isinstance(classification_threshold, (int, float)):
+            raise ValueError(f"Missing classification_labels parameter for classification model.")
+        if classification_threshold is not None and not isinstance(
+                classification_threshold, (int, float)
+        ):
             raise ValueError(
                 f"Invalid classification_threshold parameter: {classification_threshold}. Please specify valid number."
             )
@@ -338,24 +412,31 @@ class GiskardProject:
     def _validate_label_with_target(classification_labels, target_values=None):
         if target_values is not None:
             if not is_string_dtype(target_values):
-                print('Hint: "Your target variable values are numeric. '
-                      'It is recommended to have Human readable string as your target values '
-                      'to make results more understandable in Giskard."')
+                print(
+                    'Hint: "Your target variable values are numeric. '
+                    "It is recommended to have Human readable string as your target values "
+                    'to make results more understandable in Giskard."'
+                )
 
-            target_values = target_values if is_string_dtype(target_values) else [str(label) for label in target_values]
+            target_values = (
+                target_values
+                if is_string_dtype(target_values)
+                else [str(label) for label in target_values]
+            )
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
-                raise ValueError(f"Target column value {invalid_target_values} not declared in "
-                                 f"classification_labels list: {classification_labels}")
+                raise ValueError(
+                    f"Target column value {invalid_target_values} not declared in "
+                    f"classification_labels list: {classification_labels}"
+                )
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
         res = None
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if (
-                    classification_labels is not None
-                    and isinstance(classification_labels, Iterable) # type: ignore
-            ):
+            if classification_labels is not None and isinstance(
+                    classification_labels, Iterable
+            ):  # type: ignore
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
                 else:
@@ -374,24 +455,29 @@ class GiskardProject:
         return res
 
     @staticmethod
-    def _validate_model_execution(prediction_function, df: pd.DataFrame, model_type,
-                                  classification_labels=None, target=None) -> None:
+    def _validate_model_execution(
+            prediction_function, df: pd.DataFrame, model_type, classification_labels=None, target=None
+    ) -> None:
         try:
             if target is not None and target in df.columns:
                 df = df.drop(target, axis=1)
             prediction = prediction_function(df)
         except Exception:
-            raise ValueError("Invalid prediction_function input.\n"
-                             "Please make sure that prediction_function(df[feature_names]) does not return an error "
-                             "message before uploading in Giskard")
+            raise ValueError(
+                "Invalid prediction_function input.\n"
+                "Please make sure that prediction_function(df[feature_names]) does not return an error "
+                "message before uploading in Giskard"
+            )
         GiskardProject._verify_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
 
     @staticmethod
     def _verify_prediction_output(df: pd.DataFrame, model_type, prediction):
-        assert len(df) == len(prediction), f"Number of rows ({len(df)}) of dataset provided does not match with the " \
-                                           f"number of rows ({len(prediction)}) of prediction_function output"
+        assert len(df) == len(prediction), (
+            f"Number of rows ({len(df)}) of dataset provided does not match with the "
+            f"number of rows ({len(prediction)}) of prediction_function output"
+        )
         if isinstance(prediction, np.ndarray) or isinstance(prediction, list):
             if model_type == SupportedModelTypes.CLASSIFICATION.value:
                 if not any(isinstance(y, (np.floating, float)) for x in prediction for y in x):
@@ -406,11 +492,16 @@ class GiskardProject:
     def _validate_classification_prediction(classification_labels, prediction):
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
             raise ValueError(
-                "Invalid Classification Model prediction. Output probabilities should be in range [0,1]")
+                "Invalid Classification Model prediction. Output probabilities should be in range [0,1]"
+            )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
-            raise ValueError("Invalid Classification Model prediction. Sum of all probabilities should be 1 ")
+            raise ValueError(
+                "Invalid Classification Model prediction. Sum of all probabilities should be 1 "
+            )
         if prediction.shape[1] != len(classification_labels):
-            raise ValueError("Prediction output label shape and classification_labels shape do not match")
+            raise ValueError(
+                "Prediction output label shape and classification_labels shape do not match"
+            )
 
     @staticmethod
     def validate_columns_columntypes(df: pd.DataFrame, column_types) -> pd.DataFrame:
@@ -421,8 +512,10 @@ class GiskardProject:
             )
         elif not set(df.columns).issubset(set(column_types.keys())):
             missing_columns = set(df.columns) - set(column_types.keys())
-            raise ValueError(f"Invalid column_types parameter: Please declare the type for "
-                             f"{missing_columns} columns")
+            raise ValueError(
+                f"Invalid column_types parameter: Please declare the type for "
+                f"{missing_columns} columns"
+            )
         else:
             pandas_inferred_column_types = df.dtypes.to_dict()
             for column, dtype in pandas_inferred_column_types.items():
@@ -440,8 +533,10 @@ class GiskardProject:
     def _verify_category_columns(df: pd.DataFrame, column_types):
         for name, types in column_types.items():
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
-                warnings.warn(f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
-                              f"necessary use 'numeric' or 'text' in column_types instead")
+                warnings.warn(
+                    f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
+                    f"necessary use 'numeric' or 'text' in column_types instead"
+                )
 
     @staticmethod
     def _verify_is_pandasdataframe(df):
