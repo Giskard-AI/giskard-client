@@ -2,6 +2,7 @@ name: Python install
 
 on:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
