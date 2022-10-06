@@ -106,13 +106,11 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
     assert meta.headers.get(b'Content-Type') == b_content_type
     loaded_model = load_decompress(model_file.content)
 
-    assert np.array_equal(loaded_model(df), model.prediction_function(df))
+    assert np.array_equal(loaded_model(ds.df), model.prediction_function(ds.df))
     assert requirements_file.content.decode()
 
 
-def _test_upload_model_exceptions(model: GiskardModel, data):
-    df, input_types, target = data
-
+def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
 
@@ -121,9 +119,9 @@ def _test_upload_model_exceptions(model: GiskardModel, data):
         project.upload_model(
             prediction_function=model.prediction_function,
             model_type=model.model_type,
-            feature_names=input_types,
+            feature_names=model.feature_names,
             name=model_name,
-            validate_df=df,
+            validate_df=ds.df,
             classification_labels=model.classification_labels
         )
 
@@ -133,8 +131,8 @@ def _test_upload_model_exceptions(model: GiskardModel, data):
             project.upload_model_and_df(
                 prediction_function=model.prediction_function,
                 model_type=model.model_type,
-                df=df,
-                column_types=input_types,
+                df=ds.df,
+                column_types=ds.column_types,
                 feature_names=model.feature_names,
                 model_name=model_name
             )
@@ -151,11 +149,6 @@ def _test_upload_model_exceptions(model: GiskardModel, data):
                 model_name=model_name,
                 classification_labels=[0, 1]
             )
-    assert meta.headers.get(b"Content-Type") == b_content_type
-    loaded_model = load_decompress(model_file.content)
-
-    assert np.array_equal(loaded_model(ds.df), model.prediction_function(ds.df))
-    assert requirements_file.content.decode()
 
 
 @pytest.mark.parametrize(
