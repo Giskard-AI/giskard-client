@@ -68,13 +68,15 @@ def _test_upload_model(model: GiskardModel, data):
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
     if model.model_type == 'regression':
-        project.upload_model(
-            prediction_function=model.prediction_function,
-            model_type=model.model_type,
-            feature_names=model.feature_names,
-            name=model_name,
-            validate_df=df
-        )
+        with pytest.warns(UserWarning):
+            project.upload_model(
+                prediction_function=model.prediction_function,
+                model_type=model.model_type,
+                feature_names=model.feature_names,
+                name=model_name,
+                validate_df=df,
+                classification_labels=model.classification_labels
+            )
     else:
         project.upload_model(
             prediction_function=model.prediction_function,
