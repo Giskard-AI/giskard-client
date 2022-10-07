@@ -24,9 +24,21 @@ def test__validate_classification_prediction_pass(pred):
 @pytest.mark.parametrize("data", [pd.Series(data)])
 def test_verify_is_pandasdataframe_fail(data):
     with pytest.raises(AssertionError):
-        GiskardProject._verify_is_pandasdataframe(data)
+        GiskardProject._validate_is_pandasdataframe(data)
 
 
 @pytest.mark.parametrize("data", [pd.DataFrame(data)])
 def test_verify_is_pandasdataframe_pass(data):
-    GiskardProject._verify_is_pandasdataframe(data)
+    GiskardProject._validate_is_pandasdataframe(data)
+
+
+def _test_prediction_function(data):
+    return np.random.rand(5, 1)
+
+
+@pytest.mark.parametrize('data,prev_prediction,prediction_function', [
+    (pd.DataFrame(data), _test_prediction_function, _test_prediction_function)
+])
+def test_validate_deterministic_model(data, prev_prediction, prediction_function):
+    with pytest.raises(AssertionError):
+        GiskardProject._validate_deterministic_model(data, prev_prediction, prediction_function)
