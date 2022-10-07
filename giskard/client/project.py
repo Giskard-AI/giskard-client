@@ -434,9 +434,7 @@ class GiskardProject:
     def _validate_classification_labels(classification_labels, model_type):
         res = None
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if
-                    classification_labels is not None
-                    and isinstance(classification_labels, Iterable) :  # type: ignore
+            if classification_labels is not None and isinstance(classification_labels, Iterable):  # type: ignore
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
                 else:
