@@ -1,8 +1,7 @@
 """API Client to interact with the Giskard app"""
-from typing import List
-
 import logging
 import warnings
+from typing import List
 from urllib.parse import urljoin
 
 from requests.adapters import HTTPAdapter
@@ -11,6 +10,8 @@ from requests_toolbelt import sessions
 import giskard
 from giskard.client.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.client.project import GiskardProject
+
+logger = logging.getLogger(__name__)
 
 
 class GiskardError(Exception):
@@ -50,7 +51,7 @@ class GiskardClient:
             server_settings = self._session.get("settings").json()
             self.analytics.init(server_settings)
         except Exception:
-            logging.warning(f"Failed to fetch server settings", exc_info=True)
+            logger.warning(f"Failed to fetch server settings", exc_info=True)
         self.analytics.track("Init GiskardClient", {"client version": giskard.__version__})
 
     @property
