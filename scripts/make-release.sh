@@ -8,10 +8,11 @@ die () {
 }
 
 [ "$#" -eq 1 ] || die "1 argument required, $# provided"
-echo $1 | grep -E -q '^[0-9]+\.[0-9]+\.[0-9]+$' || die "Version should match ^[0-9]+\.[0-9]+\.[0-9]+$, $1 provided"
+echo $1 | grep -E -q '^[0-9]+\.[0-9]+\.[0-9]+([ab]\d+)?$' ||
+  die "Version should match '^[0-9]+\.[0-9]+\.[0-9]+([ab]\d+)?$', $1 provided"
 
 if [ -n "$1" ]; then
-  git stash
+  git stash || true
   git pull
   pyprojpath="$DIR/../pyproject.toml"
   echo "Setting version to $1 in $pyprojpath"
@@ -21,7 +22,6 @@ if [ -n "$1" ]; then
   git tag -a "v$1" -m "v$1"
   git push
   git push origin "v$1"
-  git stash pop
 else
   echo "New version is not specified"
 fi

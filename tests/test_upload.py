@@ -1,79 +1,74 @@
+import json
 from io import BytesIO
-import pytest
+
 import httpretty
 import numpy as np
 import pandas as pd
-import json
+import pytest
 from requests_toolbelt.multipart import decoder
 
-from giskard.giskard_client import GiskardClient
-from giskard.io_utils import decompress, load_decompress
-from giskard.model import GiskardModel
-from giskard.project import GiskardProject
+from giskard.client.giskard_client import GiskardClient
+from giskard.client.io_utils import decompress, load_decompress
+from giskard.client.model import GiskardModel
+from giskard.client.project import GiskardProject
+from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 
 url = "http://giskard-host:12345"
 token = "SECRET_TOKEN"
-auth = 'Bearer SECRET_TOKEN'
-content_type = 'multipart/form-data; boundary='
-model_name = 'uploaded model'
-b_content_type = b'application/json'
+auth = "Bearer SECRET_TOKEN"
+content_type = "multipart/form-data; boundary="
+model_name = "uploaded model"
+b_content_type = b"application/json"
 
 
 @httpretty.activate(verbose=True, allow_net_connect=False)
-def test_upload_df(diabetes_dataset):
-    httpretty.register_uri(
-        httpretty.POST,
-        "http://giskard-host:12345/api/v2/project/data/upload"
-    )
-    df, input_types, target = diabetes_dataset
+def test_upload_df(diabetes_dataset: GiskardDataset):
+    httpretty.register_uri(httpretty.POST, "http://giskard-host:12345/api/v2/project/data/upload")
     dataset_name = "diabetes dataset"
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
 
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(
-            df=df,
-            column_types=input_types,
-            target=target,
-            name=dataset_name)
+            df=diabetes_dataset.df,
+            column_types=diabetes_dataset.column_types,
+            target=diabetes_dataset.target,
+            name=dataset_name,
+        )
     with pytest.raises(Exception):  # Error Scenario
-        project.upload_df(df=df,
-                          column_types={"test": "test"},
-                          name=dataset_name)
+        project.upload_df(df=diabetes_dataset.df, column_types={"test": "test"}, name=dataset_name)
 
-    project.upload_df(df=df,
-                      column_types=input_types,
-                      name=dataset_name)
+    project.upload_df(
+        df=diabetes_dataset.df, column_types=diabetes_dataset.feature_types, name=dataset_name
+    )
 
     req = httpretty.last_request()
-    assert req.headers.get('Authorization') == auth
-    assert int(req.headers.get('Content-Length')) > 0
-    assert req.headers.get('Content-Type').startswith(content_type)
+    assert req.headers.get("Authorization") == auth
+    assert int(req.headers.get("Content-Length")) > 0
+    assert req.headers.get("Content-Type").startswith(content_type)
 
-    multipart_data = decoder.MultipartDecoder(req.body, req.headers.get('Content-Type'))
+    multipart_data = decoder.MultipartDecoder(req.body, req.headers.get("Content-Type"))
     assert len(multipart_data.parts) == 2
-    meta, file = multipart_data.parts
-    assert meta.headers.get(b'Content-Type') == b_content_type
-    pd.testing.assert_frame_equal(df, pd.read_csv(BytesIO(decompress(file.content))))
+    meta, upload_file = multipart_data.parts
+    assert meta.headers.get(b"Content-Type") == b_content_type
+    pd.testing.assert_frame_equal(
+        diabetes_dataset.df, pd.read_csv(BytesIO(decompress(upload_file.content)))
+    )
 
 
 @httpretty.activate(verbose=True, allow_net_connect=False)
-def _test_upload_model(model: GiskardModel, data):
-    httpretty.register_uri(
-        httpretty.POST,
-        "http://giskard-host:12345/api/v2/project/models/upload"
-    )
-    df, input_types, target = data
+def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
+    httpretty.register_uri(httpretty.POST, "http://giskard-host:12345/api/v2/project/models/upload")
 
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
-    if model.model_type == 'regression':
+    if model.model_type == "regression":
         project.upload_model(
             prediction_function=model.prediction_function,
             model_type=model.model_type,
             feature_names=model.feature_names,
             name=model_name,
-            validate_df=df
+            validate_df=ds.df,
         )
     else:
         project.upload_model(
@@ -81,50 +76,54 @@ def _test_upload_model(model: GiskardModel, data):
             model_type=model.model_type,
             feature_names=model.feature_names,
             name=model_name,
-            validate_df=df,
-            classification_labels=model.classification_labels
+            validate_df=ds.df,
+            classification_labels=model.classification_labels,
         )
 
     with pytest.raises(Exception):
         project.upload_model(
             prediction_function=model.prediction_function,
             model_type=model.model_type,
-            feature_names=input_types,
+            feature_names=ds.feature_types,
             name=model_name,
-            validate_df=df
+            validate_df=ds.df,
         )
     req = httpretty.last_request()
-    assert req.headers.get('Authorization') == auth
-    assert int(req.headers.get('Content-Length')) > 0
-    assert req.headers.get('Content-Type').startswith(content_type)
+    assert req.headers.get("Authorization") == auth
+    assert int(req.headers.get("Content-Length")) > 0
+    assert req.headers.get("Content-Type").startswith(content_type)
 
-    multipart_data = decoder.MultipartDecoder(req.body, req.headers.get('Content-Type'))
+    multipart_data = decoder.MultipartDecoder(req.body, req.headers.get("Content-Type"))
     assert len(multipart_data.parts) == 3
     meta, model_file, requirements_file = multipart_data.parts
 
-    if model.model_type == 'classification':
+    if model.model_type == "classification":
         metadata = json.loads(meta.content)
-        assert np.array_equal(model.classification_labels, metadata.get('classificationLabels'))
+        assert np.array_equal(model.classification_labels, metadata.get("classificationLabels"))
         with pytest.raises(Exception):
             project.upload_model_and_df(
                 prediction_function=model.prediction_function,
                 model_type=model.model_type,
-                df=df,
-                column_types=input_types,
+                df=ds.df,
+                column_types=ds.column_types,
                 feature_names=model.feature_names,
                 model_name=model_name,
-                classification_labels=model.classification_labels
+                classification_labels=model.classification_labels,
             )
-    assert meta.headers.get(b'Content-Type') == b_content_type
+    assert meta.headers.get(b"Content-Type") == b_content_type
     loaded_model = load_decompress(model_file.content)
 
-    assert np.array_equal(loaded_model(df), model.prediction_function(df))
+    assert np.array_equal(loaded_model(ds.df), model.prediction_function(ds.df))
     assert requirements_file.content.decode()
 
 
-@pytest.mark.parametrize('data,model,',
-                         [('german_credit_data', 'german_credit_model'),
-                          ('diabetes_dataset', 'linear_regression_diabetes')])
+@pytest.mark.parametrize(
+    "data,model,",
+    [
+        ("german_credit_data", "german_credit_model"),
+        ("diabetes_dataset", "linear_regression_diabetes"),
+    ],
+)
 def test_upload_models(data, model, request):
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
