@@ -1,10 +1,9 @@
-from typing import Callable, Dict, List, Any
-
 import re
+from typing import Callable, Dict, List, Any
 
 import numpy as np
 import pandas as pd
-from alibi.explainers import KernelShap
+import shap
 from bs4 import BeautifulSoup
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
@@ -29,23 +28,17 @@ def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
     def predict_array(array):
         return model.prediction_function(pd.DataFrame(array, columns=list(df.columns)))
 
-    kernel_shap = KernelShap(
-        predictor=predict_array,
-        feature_names=feature_names,
-        task=model.model_type,
-    )
-
     example = background_example(df, dataset.feature_types)
-    kernel_shap.fit(example)
-    explanations = kernel_shap.explain(input_df)
+    kernel = shap.KernelExplainer(predict_array, example)
+    shap_values = kernel.shap_values(input_df)
 
     if model.model_type == "regression":
         explanation_chart_data = summary_shap_regression(
-            shap_values=explanations.shap_values, feature_names=feature_names
+            shap_values=shap_values, feature_names=feature_names
         )
     elif model.model_type == "classification":
         explanation_chart_data = summary_shap_classification(
-            shap_values=explanations.shap_values,
+            shap_values=shap_values,
             feature_names=feature_names,
             class_names=model.classification_labels,
         )
@@ -84,12 +77,14 @@ def summary_shap_classification(
 
 
 def summary_shap_regression(
-        shap_values: List[np.ndarray], feature_names: List[str], max_display: int = 5
+        shap_values: np.ndarray, feature_names: List[str], max_display: int = 5
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
-    feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
-    feature_order = feature_order[-min(max_display, len(feature_order)):]
+    max_display = min(max_display, shap_values.shape[1])
+    feature_order = np.argsort(np.mean(np.abs(shap_values), axis=0))
+    feature_order = feature_order[-max_display:]
     feature_inds = feature_order[:max_display]
-    global_shap_values = np.abs(shap_values[0]).mean(0)
+    global_shap_values = np.abs(shap_values).mean(0)
+
     chart_data = {"explanations": {
         "default": {
             feature_names[feature_ind]: global_shap_values[feature_ind]
