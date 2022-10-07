@@ -89,7 +89,7 @@ class MLWorkerBridge:
         except ConnectionLost:
             logger.info("Connection to Giskard host lost")
             await self.start()
-        except BaseException as e:
+        except BaseException as e:  # NOSONAR
             logger.exception(e)
 
     async def handle_server_command(self, client, command):
@@ -126,7 +126,6 @@ class MLWorkerBridge:
 
     @staticmethod
     async def sync_data(client, reader: StreamReader, writer: StreamWriter, task_name: str = None):
-        logger.info(f"Running tasks: {id(asyncio.get_event_loop())}-{len(asyncio.all_tasks())}")
         log_prefix = "" if not task_name else task_name + ": "
         try:
             try:
@@ -143,5 +142,5 @@ class MLWorkerBridge:
                 readers.remove(reader)
         except (ConnectionLost, ConnectionResetError):
             logger.debug(f"{log_prefix}Connection lost: {client}")
-        except BaseException:
+        except BaseException:  # NOSONAR
             logger.exception(f"{log_prefix}Sync data error")
