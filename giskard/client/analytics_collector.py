@@ -1,8 +1,7 @@
 import hashlib
 import os
 
-from mixpanel import Consumer
-from mixpanel import Mixpanel
+from mixpanel import Consumer, Mixpanel
 
 
 def nofail(func):
@@ -33,9 +32,9 @@ class GiskardAnalyticsCollector:
     @staticmethod
     @nofail
     def configure_mixpanel():
-        is_dev_mode = os.environ.get("GISKARD_DEV_MODE", "n").lower() in ['yes', 'true', '1']
-        dev_mp_project_key = '4cca5fabca54f6df41ea500e33076c99'
-        prod_mp_project_key = '2c3efacc6c26ffb991a782b476b8c620'
+        is_dev_mode = os.environ.get("GISKARD_DEV_MODE", "n").lower() in ["yes", "true", "1"]
+        dev_mp_project_key = "4cca5fabca54f6df41ea500e33076c99"
+        prod_mp_project_key = "2c3efacc6c26ffb991a782b476b8c620"
 
         return Mixpanel(
             dev_mp_project_key if is_dev_mode else prod_mp_project_key,
@@ -44,22 +43,29 @@ class GiskardAnalyticsCollector:
 
     @nofail
     def init(self, server_settings):
-        giskard_instance_id = server_settings.get('app').get('generalSettings').get('instanceId')
-        self.is_enabled = server_settings.get('app').get('generalSettings').get('isAnalyticsEnabled')
-        user_login = server_settings.get('user').get('user_id')
+        giskard_instance_id = server_settings.get("app").get("generalSettings").get("instanceId")
+        self.is_enabled = (
+            server_settings.get("app").get("generalSettings").get("isAnalyticsEnabled")
+        )
+        user_login = server_settings.get("user").get("user_id")
         anonymous_login = anonymize(user_login)
         self.distinct_user_id = f"{giskard_instance_id}-{anonymous_login}"
 
         if self.is_enabled:
-            self.mp.people_set(self.distinct_user_id, {
-                "Giskard Instance": giskard_instance_id,
-                "Giskard Version": server_settings.get('app').get('version'),
-            })
+            self.mp.people_set(
+                self.distinct_user_id,
+                {
+                    "Giskard Instance": giskard_instance_id,
+                    "Giskard Version": server_settings.get("app").get("version"),
+                },
+            )
 
     @nofail
     def track(self, event_name, properties=None, meta=None):
         if self.is_enabled:
-            self.mp.track(distinct_id=self.distinct_user_id,
-                          event_name=event_name,
-                          properties=properties,
-                          meta=meta)
+            self.mp.track(
+                distinct_id=self.distinct_user_id,
+                event_name=event_name,
+                properties=properties,
+                meta=meta,
+            )

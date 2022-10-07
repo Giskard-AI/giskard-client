@@ -1,14 +1,15 @@
 """Various input/output utility functions"""
 
+from typing import Any, Optional
+
 import re
 from io import BytesIO
-from typing import Any, Optional
 
 import cloudpickle
 import pandas as pd
 from zstandard import ZstdCompressor, ZstdDecompressor
 
-COMPRESSION_MAX_OUTPUT_SIZE = 10 ** 9  # 1GB
+COMPRESSION_MAX_OUTPUT_SIZE = 10**9  # 1GB
 
 
 def pickle_dumps(variable: object) -> bytes:
@@ -29,9 +30,9 @@ def save_df(df: pd.DataFrame, format: str = "csv") -> bytes:
     if format == "csv":
         csv_buffer = BytesIO()
         if pandas_version >= 120:
-            df.to_csv(csv_buffer, index=False, na_rep='_GSK_NA_')
+            df.to_csv(csv_buffer, index=False, na_rep="_GSK_NA_")
         else:
-            csv_buffer.write(df.to_csv(index=False, na_rep='_GSK_NA_').encode("utf-8"))
+            csv_buffer.write(df.to_csv(index=False, na_rep="_GSK_NA_").encode("utf-8"))
             csv_buffer.seek(0)
         return csv_buffer.getvalue()
     else:
@@ -54,7 +55,7 @@ def compress(data: bytes, method: Optional[str] = "zstd") -> bytes:
 
 
 def decompress(
-        data: bytes, method: Optional[str] = "zstd", max_output_size: int = COMPRESSION_MAX_OUTPUT_SIZE
+    data: bytes, method: Optional[str] = "zstd", max_output_size: int = COMPRESSION_MAX_OUTPUT_SIZE
 ) -> bytes:
     if method == "zstd":
         decompressor = ZstdDecompressor()
