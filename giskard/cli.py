@@ -106,7 +106,9 @@ def _start_command(is_server, host, port, is_daemon):
             pid_file.release()
             run_daemon(is_server, host, port)
         else:
-            asyncio.get_event_loop().run_until_complete(start_ml_worker(is_server, host, port))
+            loop = asyncio.new_event_loop()
+            loop.create_task(start_ml_worker(is_server, host, port))
+            loop.run_forever()
     except KeyboardInterrupt:
         logger.info("Exiting")
     except lockfile.AlreadyLocked:
