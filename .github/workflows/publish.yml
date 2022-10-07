@@ -7,8 +7,51 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set tag name
+        id: tag
+        run: |
+          echo ::set-output name=name::${GITHUB_REF#refs/*/}
+          echo ::set-output name=version::${GITHUB_REF#refs/*/v}
+          echo ::set-output name=latest_version::$(git ls-remote --tags origin | grep -Po "v\d+\.\d+\.\d+" | sort -hr | head -1)
+
+      - name: Login to Docker registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Make
+        run: make
+
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.11
         with:
           pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Build ML Worker image
+        run: make VERSION=${{ steps.tag.outputs.version }} docker-build-nocache
+
+      - name: Push ML Worker image to Docker registry
+        run: make VERSION=${{ steps.tag.outputs.version }} docker-push
+
+      - name: Tag images as <latest>
+        if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
+        env:
+          IMAGE: docker.io/giskardai/ml-worker
+          TAG: ${{ steps.tag.outputs.version }}
+        run: docker tag "${IMAGE}":"${TAG}" "${IMAGE}":latest
+
+      - name: Push <latest> images to ECR
+        if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
+        run: make VERSION=latest docker-push
+
+      - name: Invoke deployment hook
+        run: curl -L --silent --max-time 900 ${{ secrets.TEST_SERVER_WEBHOOK_URL_BASE }}/redeploy-prod
+
+      - name: Remove containers and volumes
+        run: docker system prune -a -f
