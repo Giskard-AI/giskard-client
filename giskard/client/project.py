@@ -166,7 +166,7 @@ class GiskardProject:
         ), "Invalid feature_names parameter. Please provide the feature names as a list."
 
         if validate_df is not None:
-            self._verify_is_pandasdataframe(validate_df)
+            self._validate_is_pandasdataframe(validate_df)
             self._validate_features(feature_names=feature_names, validate_df=validate_df)
 
             if model_type == SupportedModelTypes.REGRESSION.value:
@@ -176,7 +176,7 @@ class GiskardProject:
             elif target is not None and model_type == SupportedModelTypes.CLASSIFICATION.value:
                 self._validate_target(target, validate_df.keys())
                 target_values = validate_df[target].unique()
-                self._validate_label_with_target(classification_labels, target_values)
+                self._validate_label_with_target(classification_labels, target_values, target)
                 self._validate_model_execution(
                     transformed_pred_func,
                     validate_df,
@@ -246,12 +246,12 @@ class GiskardProject:
         return result
 
     def _validate_and_compress_data(self, column_types, df, target):
-        self._verify_is_pandasdataframe(df)
+        self._validate_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
         self.validate_columns_columntypes(df, column_types)
         self._validate_column_types(column_types)
-        self._verify_category_columns(df, column_types)
+        self._validate_category_columns(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
         data = compress(save_df(df))
         return data, raw_column_types
@@ -372,7 +372,7 @@ class GiskardProject:
         if target not in dataframe_keys:
             raise ValueError(
                 f"Invalid target parameter:"
-                f" {target} column is not present in the dataset with columns:  {dataframe_keys}"
+                f" {target} column is not present in the dataset with columns: {dataframe_keys}"
             )
 
     @staticmethod
@@ -409,7 +409,7 @@ class GiskardProject:
                     )
 
     @staticmethod
-    def _validate_label_with_target(classification_labels, target_values=None):
+    def _validate_label_with_target(classification_labels, target_values=None, target_name=None):
         if target_values is not None:
             if not is_string_dtype(target_values):
                 print(
@@ -426,17 +426,15 @@ class GiskardProject:
             if not set(target_values).issubset(set(classification_labels)):
                 invalid_target_values = set(target_values) - set(classification_labels)
                 raise ValueError(
-                    f"Target column value {invalid_target_values} not declared in "
-                    f"classification_labels list: {classification_labels}"
+                    f"Values in {target_name} column are not declared in "
+                    f"classification_labels parameter: {invalid_target_values}"
                 )
 
     @staticmethod
     def _validate_classification_labels(classification_labels, model_type):
         res = None
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if classification_labels is not None and isinstance(
-                    classification_labels, Iterable
-            ):  # type: ignore
+            if classification_labels is not None and isinstance(classification_labels, Iterable):  # type: ignore
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
                 else:
@@ -454,13 +452,17 @@ class GiskardProject:
             res = None
         return res
 
-    @staticmethod
-    def _validate_model_execution(
-            prediction_function, df: pd.DataFrame, model_type, classification_labels=None, target=None
-    ) -> None:
+    def _validate_model_execution(self, prediction_function, df: pd.DataFrame, model_type,
+                                  classification_labels=None, target=None) -> None:
+        if target is not None and target in df.columns:
+            df = df.drop(target, axis=1)
         try:
-            if target is not None and target in df.columns:
-                df = df.drop(target, axis=1)
+            prediction_function(df.head(1))
+        except Exception:
+            raise ValueError("Invalid prediction_function input.\n"
+                             "Please make sure that prediction_function(df.head(1)) does not return an error "
+                             "message before uploading in Giskard")
+        try:
             prediction = prediction_function(df)
         except Exception:
             raise ValueError(
@@ -468,12 +470,16 @@ class GiskardProject:
                 "Please make sure that prediction_function(df[feature_names]) does not return an error "
                 "message before uploading in Giskard"
             )
-        GiskardProject._verify_prediction_output(df, model_type, prediction)
+        min_num_rows = min(len(df), 5)
+        GiskardProject._validate_deterministic_model(df.head(min_num_rows),
+                                                     prediction[:min_num_rows],
+                                                     prediction_function)
+        GiskardProject._validate_prediction_output(df, model_type, prediction)
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
             GiskardProject._validate_classification_prediction(classification_labels, prediction)
 
     @staticmethod
-    def _verify_prediction_output(df: pd.DataFrame, model_type, prediction):
+    def _validate_prediction_output(df: pd.DataFrame, model_type, prediction):
         assert len(df) == len(prediction), (
             f"Number of rows ({len(df)}) of dataset provided does not match with the "
             f"number of rows ({len(prediction)}) of prediction_function output"
@@ -491,13 +497,12 @@ class GiskardProject:
     @staticmethod
     def _validate_classification_prediction(classification_labels, prediction):
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
-            raise ValueError(
-                "Invalid Classification Model prediction. Output probabilities should be in range [0,1]"
+            warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
+                          "The output of Multiclass and Binary classifications should be within the range [0,1]"
             )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
-            raise ValueError(
-                "Invalid Classification Model prediction. Sum of all probabilities should be 1 "
-            )
+            warnings.warn("Sum of output values of prediction_function is not equal to 1."
+                          " For Multiclass and Binary classifications, the sum of probabilities should be 1")
         if prediction.shape[1] != len(classification_labels):
             raise ValueError(
                 "Prediction output label shape and classification_labels shape do not match"
@@ -530,7 +535,7 @@ class GiskardProject:
             return df
 
     @staticmethod
-    def _verify_category_columns(df: pd.DataFrame, column_types):
+    def _validate_category_columns(df: pd.DataFrame, column_types):
         for name, types in column_types.items():
             if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
                 warnings.warn(
@@ -539,8 +544,16 @@ class GiskardProject:
                 )
 
     @staticmethod
-    def _verify_is_pandasdataframe(df):
+    def _validate_is_pandasdataframe(df):
         assert isinstance(df, pd.DataFrame), "Dataset provided is not a pandas dataframe"
+
+    @staticmethod
+    def _validate_deterministic_model(sample_df, prev_prediction, prediction_function):
+        """
+        Asserts if the model is deterministic by asserting previous and current prediction on same data
+        """
+        new_prediction = prediction_function(sample_df)
+        assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
