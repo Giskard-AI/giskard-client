@@ -434,9 +434,7 @@ class GiskardProject:
     def _validate_classification_labels(classification_labels, model_type):
         res = None
         if model_type == SupportedModelTypes.CLASSIFICATION.value:
-            if classification_labels is not None and isinstance(
-                    classification_labels, Iterable
-            ):  # type: ignore
+            if classification_labels is not None and isinstance(classification_labels, Iterable):  # type: ignore
                 if len(classification_labels) > 1:
                     res: Optional[List[str]] = [str(label) for label in classification_labels]
                 else:
@@ -458,9 +456,15 @@ class GiskardProject:
     def _validate_model_execution(
             prediction_function, df: pd.DataFrame, model_type, classification_labels=None, target=None
     ) -> None:
+        if target is not None and target in df.columns:
+            df = df.drop(target, axis=1)
         try:
-            if target is not None and target in df.columns:
-                df = df.drop(target, axis=1)
+            prediction_function(df.head(1))
+        except Exception:
+            raise ValueError("Invalid prediction_function input.\n"
+                             "Please make sure that prediction_function(df.head(1)) does not return an error "
+                             "message before uploading in Giskard")
+        try:
             prediction = prediction_function(df)
         except Exception:
             raise ValueError(
