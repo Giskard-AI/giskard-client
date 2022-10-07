@@ -77,12 +77,14 @@ def summary_shap_classification(
 
 
 def summary_shap_regression(
-        shap_values: List[np.ndarray], feature_names: List[str], max_display: int = 5
+        shap_values: np.ndarray, feature_names: List[str], max_display: int = 5
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
-    feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
-    feature_order = feature_order[-min(max_display, len(feature_order)):]
+    max_display = min(max_display, shap_values.shape[1])
+    feature_order = np.argsort(np.mean(np.abs(shap_values), axis=0))
+    feature_order = feature_order[-max_display:]
     feature_inds = feature_order[:max_display]
     global_shap_values = np.abs(shap_values).mean(0)
+
     chart_data = {"explanations": {
         "default": {
             feature_names[feature_ind]: global_shap_values[feature_ind]
