@@ -454,9 +454,15 @@ class GiskardProject:
 
     def _validate_model_execution(self, prediction_function, df: pd.DataFrame, model_type,
                                   classification_labels=None, target=None) -> None:
+        if target is not None and target in df.columns:
+            df = df.drop(target, axis=1)
         try:
-            if target is not None and target in df.columns:
-                df = df.drop(target, axis=1)
+            prediction_function(df.head(1))
+        except Exception:
+            raise ValueError("Invalid prediction_function input.\n"
+                             "Please make sure that prediction_function(df.head(1)) does not return an error "
+                             "message before uploading in Giskard")
+        try:
             prediction = prediction_function(df)
         except Exception:
             raise ValueError(
