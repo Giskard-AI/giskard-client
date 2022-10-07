@@ -63,13 +63,16 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
     client = GiskardClient(url, token)
     project = GiskardProject(client.session, "test-project")
     if model.model_type == "regression":
-        project.upload_model(
-            prediction_function=model.prediction_function,
-            model_type=model.model_type,
-            feature_names=model.feature_names,
-            name=model_name,
-            validate_df=ds.df,
-        )
+        # Warning Scenario: classification_labels is sent for regression model
+        with pytest.warns(UserWarning):
+            project.upload_model(
+                prediction_function=model.prediction_function,
+                model_type=model.model_type,
+                feature_names=model.feature_names,
+                name=model_name,
+                validate_df=ds.df,
+                classification_labels=model.classification_labels
+            )
     else:
         project.upload_model(
             prediction_function=model.prediction_function,
@@ -80,14 +83,6 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
             classification_labels=model.classification_labels,
         )
 
-    with pytest.raises(Exception):
-        project.upload_model(
-            prediction_function=model.prediction_function,
-            model_type=model.model_type,
-            feature_names=ds.feature_types,
-            name=model_name,
-            validate_df=ds.df,
-        )
     req = httpretty.last_request()
     assert req.headers.get("Authorization") == auth
     assert int(req.headers.get("Content-Length")) > 0
@@ -100,6 +95,31 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
     if model.model_type == "classification":
         metadata = json.loads(meta.content)
         assert np.array_equal(model.classification_labels, metadata.get("classificationLabels"))
+
+    assert meta.headers.get(b'Content-Type') == b_content_type
+    loaded_model = load_decompress(model_file.content)
+
+    assert np.array_equal(loaded_model(ds.df), model.prediction_function(ds.df))
+    assert requirements_file.content.decode()
+
+
+def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
+    client = GiskardClient(url, token)
+    project = GiskardProject(client.session, "test-project")
+
+    # Error Scenario : Column_types dictionary sent as feature_names
+    with pytest.raises(Exception):
+        project.upload_model(
+            prediction_function=model.prediction_function,
+            model_type=model.model_type,
+            feature_names=model.feature_names,
+            name=model_name,
+            validate_df=ds.df,
+            classification_labels=model.classification_labels
+        )
+
+    if model.model_type == 'classification':
+        # Error Scenario: Classification model sent without classification_labels
         with pytest.raises(Exception):
             project.upload_model_and_df(
                 prediction_function=model.prediction_function,
@@ -107,14 +127,21 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
                 df=ds.df,
                 column_types=ds.column_types,
                 feature_names=model.feature_names,
-                model_name=model_name,
-                classification_labels=model.classification_labels,
+                model_name=model_name
             )
-    assert meta.headers.get(b"Content-Type") == b_content_type
-    loaded_model = load_decompress(model_file.content)
 
-    assert np.array_equal(loaded_model(ds.df), model.prediction_function(ds.df))
-    assert requirements_file.content.decode()
+        # Error Scenario: Target has values not declared in Classification Label
+        with pytest.raises(Exception):
+            project.upload_model_and_df(
+                prediction_function=model.prediction_function,
+                model_type=model.model_type,
+                target='default',
+                df=ds.df,
+                column_types=ds.column_types,
+                feature_names=model.feature_names,
+                model_name=model_name,
+                classification_labels=[0, 1]
+            )
 
 
 @pytest.mark.parametrize(
@@ -128,3 +155,12 @@ def test_upload_models(data, model, request):
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
     _test_upload_model(model, data)
+
+
+@pytest.mark.parametrize('data,model,',
+                         [('german_credit_data', 'german_credit_model'),
+                          ('diabetes_dataset', 'linear_regression_diabetes')])
+def test_upload_models_exceptions(data, model, request):
+    data = request.getfixturevalue(data)
+    model = request.getfixturevalue(model)
+    _test_upload_model_exceptions(model, data)
