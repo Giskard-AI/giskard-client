@@ -8,7 +8,12 @@ VERSION := dev
 
 
 .PHONY: all
-all: clean poetry-download install-dependencies generate-proto test
+all: clean init-submodules poetry-download install-dependencies generate-proto test
+
+#* Poetry
+.PHONY: init-submodules
+init-submodules:
+	git submodule update --init --recursive -q
 
 #* Poetry
 .PHONY: poetry-download
