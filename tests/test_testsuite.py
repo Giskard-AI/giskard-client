@@ -1,8 +1,8 @@
 import httpretty
 import pytest
 
-from giskard.giskard_client import  GiskardClient
-from giskard.project import GiskardProject
+from giskard import GiskardClient
+from giskard.client.project import GiskardProject
 
 url = "http://giskard-host:12345"
 token = "SECRET_TOKEN"
