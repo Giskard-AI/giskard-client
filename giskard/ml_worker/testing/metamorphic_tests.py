@@ -6,6 +6,7 @@ from giskard.ml_worker.generated.ml_worker_pb2 import SingleTestResult, TestMess
 from giskard.ml_worker.testing.abstract_test_collection import AbstractTestCollection
 from giskard.ml_worker.testing.utils import apply_perturbation_inplace
 from giskard.ml_worker.utils.logging import timer
+from giskard.ml_worker.testing.stat_utils import equivalence_t_test, paired_t_test
 
 
 class MetamorphicTests(AbstractTestCollection):
@@ -80,6 +81,19 @@ class MetamorphicTests(AbstractTestCollection):
 
         failed_idx = results_df.loc[~results_df.index.isin(passed_idx)].index.values
         return passed_idx, failed_idx
+
+    def _compare_probabilities(self, result_df, flag=None):
+
+          if flag == 'Invariance':
+              p_value = equivalence_t_test(result_df['prediction'], result_df['perturbed_prediction'])[1]
+
+          elif flag == 'Increasing':
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], type='LEFT')[1]
+
+          elif flag == 'Decreasing':
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], type='RIGHT')[1]
+
+          return p_value
 
     def _test_metamorphic(
         self,
@@ -283,3 +297,200 @@ class MetamorphicTests(AbstractTestCollection):
             classification_label=classification_label,
             threshold=threshold,
         )
+
+
+    def _test_metamorphic_stat(self,
+                                flag,
+                                actual_slice: GiskardDataset,
+                                model,
+                                perturbation_dict,
+                                threshold: float,
+                                classification_label=None,
+                                output_proba=True
+                                ) -> SingleTestResult:
+
+         actual_slice.df.reset_index(drop=True, inplace=True)
+
+         result_df, modified_rows_count = self._perturb_and_predict(actual_slice,
+                                                                    model,
+                                                                    perturbation_dict,
+                                                                    output_proba=output_proba,
+                                                                    classification_label=classification_label)
+
+         p_value = self._compare_probabilities(result_df, flag)
+
+         messages = [TestMessage(
+             type=TestMessageType.INFO,
+             text=f"{modified_rows_count} rows were perturbed"
+         )]
+
+         return self.save_results(SingleTestResult(
+             actual_slices_size=[len(actual_slice)],
+             metric=p_value,
+             passed=p_value < threshold,
+             messages=messages))
+
+    def test_metamorphic_decreasing_stat(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05,
+                                        classification_label=None
+                                        ):
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        assert model.model_type != "classification" or classification_label in model.classification_labels, \
+            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
+        return self._test_metamorphic_stat(flag='Decreasing',
+                                          actual_slice=df,
+                                          model=model,
+                                          perturbation_dict=perturbation_dict,
+                                          classification_label=classification_label,
+                                          threshold=threshold)
+
+    def test_metamorphic_increasing_stat(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05,
+                                        classification_label=None
+                                        ):
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        assert model.model_type != "classification" or classification_label in model.classification_labels, \
+            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
+        return self._test_metamorphic_stat(flag='Increasing',
+                                          actual_slice=df,
+                                          model=model,
+                                          perturbation_dict=perturbation_dict,
+                                          classification_label=classification_label,
+                                          threshold=threshold)
+
+    def test_metamorphic_invariance_stat(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05,
+                                        classification_label=None
+                                        ):
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        assert model.model_type != "classification" or classification_label in model.classification_labels, \
+            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
+        return self._test_metamorphic(flag='Invariance',
+                                      actual_slice=df,
+                                      model=model,
+                                      perturbation_dict=perturbation_dict,
+                                      classification_label=classification_label,
+                                      threshold=threshold)
