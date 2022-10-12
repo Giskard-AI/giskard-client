@@ -136,9 +136,13 @@ class MetamorphicTests(AbstractTestCollection):
             )
         )
 
-    def test_metamorphic_invariance(
-        self, df: GiskardDataset, model, perturbation_dict, threshold=0.5, output_sensitivity=None
-    ) -> SingleTestResult:
+    def test_metamorphic_invariance(self,
+                                    df: GiskardDataset,
+                                    model,
+                                    perturbation_dict,
+                                    threshold=0.5,
+                                    output_sensitivity=None
+                                    ) -> SingleTestResult:
         """
         Summary: Tests if the model prediction is invariant when the feature values are perturbed
 
@@ -189,8 +193,12 @@ class MetamorphicTests(AbstractTestCollection):
             output_proba=False,
         )
 
-    def test_metamorphic_increasing(
-        self, df: GiskardDataset, model, perturbation_dict, threshold=0.5, classification_label=None
+    def test_metamorphic_increasing(self,
+                                    df: GiskardDataset,
+                                    model,
+                                    perturbation_dict,
+                                    threshold=0.5,
+                                    classification_label=None
     ):
         """
         Summary: Tests if the model probability increases when the feature values are perturbed
@@ -444,9 +452,8 @@ class MetamorphicTests(AbstractTestCollection):
                                         df: GiskardDataset,
                                         model,
                                         perturbation_dict,
-                                        threshold=0.05,
-                                        classification_label=None
-                                        ):
+                                        threshold=0.05
+                                        ) -> SingleTestResult:
         """
         Summary: Tests if the model probability decreases when the feature values are perturbed
 
@@ -485,12 +492,8 @@ class MetamorphicTests(AbstractTestCollection):
               TRUE if metric > threshold
         """
 
-        assert model.model_type != "classification" or classification_label in model.classification_labels, \
-            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
-
-        return self._test_metamorphic(flag='Invariance',
+        return self._test_metamorphic_stat(flag='Invariance',
                                       actual_slice=df,
                                       model=model,
                                       perturbation_dict=perturbation_dict,
-                                      classification_label=classification_label,
                                       threshold=threshold)
