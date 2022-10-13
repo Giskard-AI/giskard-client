@@ -75,6 +75,9 @@ COPY ./Makefile ./
 
 RUN make generate-proto
 
+RUN git clone http://localhost:1234/created_tests:~/giskard-home
+RUN git branch --set-upstream-to=origin/main         
+RUN git pull
 
 # `production` image used for runtime
 FROM python-base as production
