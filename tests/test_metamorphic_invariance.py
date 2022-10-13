@@ -94,7 +94,6 @@ def test_metamorphic_invariance_regression(
                         (0.5, 0.5, -0.1, 0.1, 'Decreasing')])
 
 def test_metamorphic_compare_statistic_tests(loc_pop, scale_pop, loc_perturb, scale_perturb, direction):
-
     population = np.random.normal(loc_pop, scale_pop, size=100)
     perturbation = np.random.normal(loc_perturb, scale_perturb, size=100)
     print(perturbation)
@@ -103,14 +102,11 @@ def test_metamorphic_compare_statistic_tests(loc_pop, scale_pop, loc_perturb, sc
     result_dec, p_value_dec = paired_t_test(population, population+perturbation, type="RIGHT")
     result_inv, p_value_inv = equivalence_t_test(population, population+perturbation)
 
-    dict_mapping = {'Invariant': (result_inv, p_value_inv), 
-                    'Decreasing':(result_dec, p_value_dec),
-                    'Increasing':(result_inc, p_value_inc)}
+    dict_mapping = {'Invariant':  (result_inv, p_value_inv),
+                    'Decreasing': (result_dec, p_value_dec),
+                    'Increasing': (result_inc, p_value_inc)}
 
-    for key in dict_mapping.keys():
-            print(f'key: {key} and p_value; {dict_mapping[key][1]}')
-            if key == direction:
-                assert dict_mapping[key][1]<0.05
-            else:
-                assert dict_mapping[key][1]>0.05
-    return None
+    print(f'Direction: {direction} and p_value; {dict_mapping[direction][1]}')
+    assert dict_mapping[direction][1] < 0.05
+
+    #--- plotting
