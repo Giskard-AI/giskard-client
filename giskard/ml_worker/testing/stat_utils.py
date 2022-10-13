@@ -14,7 +14,7 @@ def paired_t_test_statistic(population_1, population_2):
     Output: the test statistic t
     """
     dim1,dim2=population_1.shape[0],population_2.shape[0]
-    assert(dim1 != dim2), f"populations have different size, got: dim1={dim1}, dim2={dim2}."
+    assert(dim1 == dim2), f"populations have different size, got: dim1={dim1}, dim2={dim2}."
     mean_diff = np.mean(population_1 - population_2)
     s_diff = np.std(population_1 - population_2)
     standard_errors = s_diff / math.sqrt(len(population_1))
