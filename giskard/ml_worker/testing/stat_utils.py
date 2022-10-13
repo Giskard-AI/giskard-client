@@ -69,3 +69,43 @@ def equivalence_t_test(population_1, population_2, threshold=0.1, quantile=0.05)
         print("not enough evidence to reject null hypothesis")
         return False, max(paired_t_test(population_1, population_2_low, quantile, type="RIGHT")[1],
                         paired_t_test(population_1, population_2_up, quantile, type="LEFT")[1])
+
+def paired_ranksums(population_1, population_2, quantile=.05, type="two-sided"):
+    """
+    Computes the result of the paired t-test given 2 groups of observations and a level of significance
+    """
+    if type not in ['two-sided', 'less', 'greater']:
+        raise Exception("Incorrect type! The type has to be one of the following: ['two-sided','less','greater']")
+
+    statistic, p_value = scipy.stats.ranksums(population_1, population_2, alternative=type)
+
+    if p_value > quantile:
+        return False, p_value
+    else:
+        return True, p_value
+
+
+def equivalence_ranksums(population_1, population_2, threshold=0.1, quantile=0.05):
+    """
+    Computes the equivalence test to show that mean 2 - threshold < mean 1 < mean 2 + threshold
+
+    Inputs:
+        - population_1, np.array 1D: an array of 1 dimension with the observations of 1st group
+        - population_2, np.array 1D: an array of 1 dimension with the observations of 2nd group
+        - threshold, float: small value that determines the maximal difference that can be between means
+        - quantile, float: the level of significance, is the 1-q quantile of the distribution
+
+    Output, bool: True if the null is rejected and False if there is not enough evidence
+    """
+    population_2_up = population_2 + threshold
+    population_2_low = population_2 - threshold
+    if paired_ranksums(population_1, population_2_low, quantile, type="greater") and \
+            paired_ranksums(population_1, population_2_up, quantile, type="less"):
+
+        print("null hypothesis rejected at a level of significance", quantile)
+        return True, max(paired_ranksums(population_1, population_2_low, quantile, type="greater")[1],
+                         paired_ranksums(population_1, population_2_up, quantile, type="less")[1])
+    else:
+        print("not enough evidence to reject null hypothesis")
+        return False, max(paired_ranksums(population_1, population_2_low, quantile, type="greater")[1],
+                          paired_ranksums(population_1, population_2_up, quantile, type="lesss")[1])

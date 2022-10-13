@@ -7,6 +7,7 @@ from giskard.ml_worker.testing.abstract_test_collection import AbstractTestColle
 from giskard.ml_worker.testing.utils import apply_perturbation_inplace
 from giskard.ml_worker.utils.logging import timer
 from giskard.ml_worker.testing.stat_utils import equivalence_t_test, paired_t_test
+from giskard.ml_worker.testing.stat_utils import equivalence_ranksums, paired_ranksums
 
 
 class MetamorphicTests(AbstractTestCollection):
@@ -81,6 +82,32 @@ class MetamorphicTests(AbstractTestCollection):
 
         failed_idx = results_df.loc[~results_df.index.isin(passed_idx)].index.values
         return passed_idx, failed_idx
+
+    def _compare_probabilities_t_test(self, result_df, flag=None):
+
+          if flag == 'Invariance':
+              p_value = equivalence_t_test(result_df['prediction'], result_df['perturbed_prediction'])[1]
+
+          elif flag == 'Increasing':
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], type='LEFT')[1]
+
+          elif flag == 'Decreasing':
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], type='RIGHT')[1]
+
+          return p_value
+
+    def _compare_probabilities_ranksums(self, result_df, flag=None):
+
+          if flag == 'Invariance':
+              p_value = equivalence_ranksums(result_df['prediction'], result_df['perturbed_prediction'])[1]
+
+          elif flag == 'Increasing':
+              p_value = paired_ranksums(result_df['prediction'], result_df['perturbed_prediction'], type='LEFT')[1]
+
+          elif flag == 'Decreasing':
+              p_value = paired_ranksums(result_df['prediction'], result_df['perturbed_prediction'], type='RIGHT')[1]
+
+          return p_value
 
     def _compare_probabilities(self, result_df, flag=None):
 
