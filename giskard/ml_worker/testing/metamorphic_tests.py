@@ -86,26 +86,26 @@ class MetamorphicTests(AbstractTestCollection):
     def _compare_probabilities_t_test(self, result_df, flag=None):
 
           if flag == 'Invariance':
-              _, p_value = equivalence_t_test(result_df['prediction'], result_df['perturbed_prediction'])[1]
+              p_value = equivalence_t_test(result_df['prediction'], result_df['perturbed_prediction'])[1]
 
           elif flag == 'Increasing':
-              _, p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='less')[1]
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='less')[1]
 
           elif flag == 'Decreasing':
-              _, p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='greater')[1]
+              p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='greater')[1]
 
           return p_value
 
     def _compare_probabilities_wilcoxon(self, result_df, flag=None):
 
           if flag == 'Invariance':
-              _, p_value = equivalence_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'])[1]
+              p_value = equivalence_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'])[1]
 
           elif flag == 'Increasing':
-              _, p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='LEFT')[1]
+              p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='less')[1]
 
           elif flag == 'Decreasing':
-              _, p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='RIGHT')[1]
+              p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='greater')[1]
 
           return p_value
 
@@ -339,7 +339,7 @@ class MetamorphicTests(AbstractTestCollection):
                                                                     output_proba=output_proba,
                                                                     classification_label=classification_label)
 
-         p_value = self._compare_probabilities(result_df, flag)
+         p_value = self._compare_probabilities_t_test(result_df, flag)
 
          messages = [TestMessage(
              type=TestMessageType.INFO,
@@ -352,7 +352,7 @@ class MetamorphicTests(AbstractTestCollection):
              passed=p_value < threshold,
              messages=messages))
 
-    def test_metamorphic_decreasing_stat(self,
+    def test_metamorphic_decreasing_t_test(self,
                                         df: GiskardDataset,
                                         model,
                                         perturbation_dict,
@@ -400,14 +400,14 @@ class MetamorphicTests(AbstractTestCollection):
         assert model.model_type != "classification" or classification_label in model.classification_labels, \
             f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
-        return self._test_metamorphic_stat(flag='Decreasing',
+        return self._test_metamorphic_t_test(flag='Decreasing',
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
                                           classification_label=classification_label,
                                           threshold=threshold)
 
-    def test_metamorphic_increasing_stat(self,
+    def test_metamorphic_increasing_t_test(self,
                                         df: GiskardDataset,
                                         model,
                                         perturbation_dict,
@@ -455,14 +455,14 @@ class MetamorphicTests(AbstractTestCollection):
         assert model.model_type != "classification" or classification_label in model.classification_labels, \
             f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
-        return self._test_metamorphic_stat(flag='Increasing',
+        return self._test_metamorphic_t_test(flag='Increasing',
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
                                           classification_label=classification_label,
                                           threshold=threshold)
 
-    def test_metamorphic_invariance_stat(self,
+    def test_metamorphic_invariance_t_test(self,
                                         df: GiskardDataset,
                                         model,
                                         perturbation_dict,
@@ -506,7 +506,199 @@ class MetamorphicTests(AbstractTestCollection):
               TRUE if metric > threshold
         """
 
-        return self._test_metamorphic_stat(flag='Invariance',
+        return self._test_metamorphic_t_test(flag='Invariance',
+                                      actual_slice=df,
+                                      model=model,
+                                      perturbation_dict=perturbation_dict,
+                                      threshold=threshold)
+
+
+    def _test_metamorphic_wilcoxon(self,
+                                flag,
+                                actual_slice: GiskardDataset,
+                                model,
+                                perturbation_dict,
+                                threshold: float,
+                                classification_label=None,
+                                output_proba=True
+                                ) -> SingleTestResult:
+
+         actual_slice.df.reset_index(drop=True, inplace=True)
+
+         result_df, modified_rows_count = self._perturb_and_predict(actual_slice,
+                                                                    model,
+                                                                    perturbation_dict,
+                                                                    output_proba=output_proba,
+                                                                    classification_label=classification_label)
+
+         p_value = self._compare_probabilities_wilcoxon(result_df, flag)
+
+         messages = [TestMessage(
+             type=TestMessageType.INFO,
+             text=f"{modified_rows_count} rows were perturbed"
+         )]
+
+         return self.save_results(SingleTestResult(
+             actual_slices_size=[len(actual_slice)],
+             metric=p_value,
+             passed=p_value < threshold,
+             messages=messages))
+
+    def test_metamorphic_decreasing_wilcoxon(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05,
+                                        classification_label=None
+                                        ):
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        assert model.model_type != "classification" or classification_label in model.classification_labels, \
+            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
+        return self._test_metamorphic_wilcoxon(flag='Decreasing',
+                                          actual_slice=df,
+                                          model=model,
+                                          perturbation_dict=perturbation_dict,
+                                          classification_label=classification_label,
+                                          threshold=threshold)
+
+    def test_metamorphic_increasing_wilcoxon(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05,
+                                        classification_label=None
+                                        ):
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        assert model.model_type != "classification" or classification_label in model.classification_labels, \
+            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
+        return self._test_metamorphic_wilcoxon(flag='Increasing',
+                                          actual_slice=df,
+                                          model=model,
+                                          perturbation_dict=perturbation_dict,
+                                          classification_label=classification_label,
+                                          threshold=threshold)
+
+    def test_metamorphic_invariance_wilcoxon(self,
+                                        df: GiskardDataset,
+                                        model,
+                                        perturbation_dict,
+                                        threshold=0.05
+                                        ) -> SingleTestResult:
+        """
+        Summary: Tests if the model probability decreases when the feature values are perturbed
+
+        Description: -
+        - For classification: Test if the model probability of a given classification_label is
+        decreasing after feature values perturbation.
+
+        - For regression: Test if the model prediction is decreasing after feature values perturbation.
+
+        The test is passed when the percentage of rows that are decreasing is higher than the threshold
+
+        Example : For a credit scoring model, the test is passed when an increase of wage by 10%,
+        default probability is decreasing for more than 50% of people in the dataset
+
+        Args:
+            df(GiskardDataset):
+              Dataset used to compute the test
+            model(GiskardModel):
+              Model used to compute the test
+            perturbation_dict(dict):
+              Dictionary of the perturbations. It provides the perturbed features as key
+              and a perturbation lambda function as value
+            threshold(float):
+              Threshold of the ratio of decreasing rows
+            classification_label(str):
+              Optional. One specific label value from the target column
+
+        Returns:
+            actual_slices_size:
+              Length of actual_slice tested
+            message:
+              Test result message
+            metric:
+              The ratio of decreasing rows over the perturbed rows
+            passed:
+              TRUE if metric > threshold
+        """
+
+        return self._test_metamorphic_wilcoxon(flag='Invariance',
                                       actual_slice=df,
                                       model=model,
                                       perturbation_dict=perturbation_dict,
