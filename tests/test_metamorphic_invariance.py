@@ -2,7 +2,7 @@ from giskard.ml_worker.testing.functions import GiskardTestFunctions
 import numpy as np
 import pytest
 from giskard.ml_worker.testing.stat_utils import equivalence_t_test, paired_t_test
-from giskard.ml_worker.testing.stat_utils import equivalence_ranksums, paired_ranksums
+from giskard.ml_worker.testing.stat_utils import equivalence_wilcoxon, paired_wilcoxon
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 
 def test_metamorphic_invariance_no_change(german_credit_test_data, german_credit_model):
@@ -99,8 +99,8 @@ def test_metamorphic_compare_t_tests(loc_pop, scale_pop, loc_perturb, scale_pert
     perturbation = np.random.normal(loc_perturb, scale_perturb, size=100)
     print(perturbation)
 
-    result_inc, p_value_inc = paired_t_test(population, population+perturbation, type="LEFT")
-    result_dec, p_value_dec = paired_t_test(population, population+perturbation, type="RIGHT")
+    result_inc, p_value_inc = paired_t_test(population, population+perturbation, alternative="less")
+    result_dec, p_value_dec = paired_t_test(population, population+perturbation, alternative="greater")
     result_inv, p_value_inv = equivalence_t_test(population, population+perturbation)
 
     dict_mapping = {'Invariant':  (result_inv, p_value_inv),
@@ -116,14 +116,14 @@ def test_metamorphic_compare_t_tests(loc_pop, scale_pop, loc_perturb, scale_pert
                         (0.5, 0.5, 0.1, 0.1, 'Increasing'),
                         (0.5, 0.5, -0.1, 0.1, 'Decreasing')])
 
-def test_metamorphic_compare_ranksums_tests(loc_pop, scale_pop, loc_perturb, scale_perturb, direction):
+def test_metamorphic_compare_wilcoxon_tests(loc_pop, scale_pop, loc_perturb, scale_perturb, direction):
     population = np.random.normal(loc_pop, scale_pop, size=100)
     perturbation = np.random.normal(loc_perturb, scale_perturb, size=100)
     print(perturbation)
 
-    result_inc, p_value_inc = paired_ranksums(population, population+perturbation, type="less")
-    result_dec, p_value_dec = paired_ranksums(population, population+perturbation, type="greater")
-    result_inv, p_value_inv = equivalence_ranksums(population, population+perturbation)
+    result_inc, p_value_inc = paired_wilcoxon(population, population+perturbation, alternative="less")
+    result_dec, p_value_dec = paired_wilcoxon(population, population+perturbation, alternative="greater")
+    result_inv, p_value_inv = equivalence_wilcoxon(population, population+perturbation)
 
     dict_mapping = {'Invariant':  (result_inv, p_value_inv),
                     'Decreasing': (result_dec, p_value_dec),
