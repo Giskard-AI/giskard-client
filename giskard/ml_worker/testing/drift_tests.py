@@ -546,7 +546,7 @@ class DriftTests(AbstractTestCollection):
         for the classification labels predictions for a given slice
 
         Example : The test is passed when the  Chi Square value of classification labels prediction
-        for females between reference and actual sets is below 0.2
+        for females between reference and actual sets is below 0.05
 
         Args:
             actual_slice(GiskardDataset):
