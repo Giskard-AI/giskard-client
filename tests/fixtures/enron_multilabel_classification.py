@@ -35,7 +35,7 @@ def enron_data() -> GiskardDataset:
             path("test_data/enron_data.csv"), keep_default_na=False, na_values=["_GSK_NA_"]
         ),
         target="Target",
-        feature_types=input_types,
+        column_types=input_types,
     )
 
 
@@ -43,7 +43,7 @@ def enron_data() -> GiskardDataset:
 def enron_test_data(enron_data):
     return GiskardDataset(
         df=pd.DataFrame(enron_data.df).drop(columns=["Target"]),
-        feature_types=input_types,
+        column_types=input_types,
         target=None,
     )
 
