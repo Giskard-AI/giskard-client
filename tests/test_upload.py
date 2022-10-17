@@ -39,7 +39,7 @@ def test_upload_df(diabetes_dataset: GiskardDataset):
         project.upload_df(df=diabetes_dataset.df, column_types={"test": "test"}, name=dataset_name)
 
     project.upload_df(
-        df=diabetes_dataset.df, column_types=diabetes_dataset.feature_types, name=dataset_name
+        df=diabetes_dataset.df, column_types=diabetes_dataset.column_types, name=dataset_name
     )
 
     req = httpretty.last_request()
