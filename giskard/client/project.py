@@ -457,10 +457,10 @@ class GiskardProject:
         if target is not None and target in df.columns:
             df = df.drop(target, axis=1)
         try:
-            prediction_function(df.head(1))
+            prediction_function(df.iloc[[0]])
         except Exception:
             raise ValueError("Invalid prediction_function input.\n"
-                             "Please make sure that prediction_function(df.head(1)) does not return an error "
+                             "Please make sure that prediction_function(df.iloc[[0]]) does not return an error "
                              "message before uploading in Giskard")
         try:
             prediction = prediction_function(df)
