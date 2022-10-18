@@ -1,6 +1,6 @@
 import scipy.stats as stats
 
-def paired_t_test(population_1, population_2, alternative, quantile=.05):
+def paired_t_test(population_1, population_2, alternative, critical_quantile):
     """
     Computes the result of the paired t-test given 2 groups of observations and a level of significance
 
@@ -12,45 +12,45 @@ def paired_t_test(population_1, population_2, alternative, quantile=.05):
     """
 
     if alternative not in ["less", "greater"]:
-        raise Exception("Incorrect alternative hypothesis! The alternative has to be one of the following: ['less', 'greater']")
+        raise Exception("Incorrect alternative hypothesis! The alsernative has to be one of the following: ['less', 'greater']")
 
     stat, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
 
-    if p_value > quantile:
+    if p_value > critical_quantile:
         return False, p_value
     else:
         return True, p_value
 
-def equivalence_t_test(population_1, population_2, threshold=0.1, quantile=0.05):
+def equivalence_t_test(population_1, population_2, window_size, critical_quantile):
     """
-    Computes the equivalence test to show that mean 2 - threshold < mean 1 < mean 2 + threshold
+    Computes the equivalence test to show that mean 2 - window_size/2 < mean 1 < mean 2 + window_size/2
 
     Inputs:
         - population_1, np.array 1D: an array of 1 dimension with the observations of 1st group
         - population_2, np.array 1D: an array of 1 dimension with the observations of 2nd group
-        - threshold, float: small value that determines the maximal difference that can be between means
-        - quantile, float: the level of significance, is the 1-q quantile of the distribution
+        - window_size, float: small value that determines the maximal difference that can be between means
+        - critical_quantile, float: the level of significance, is the 1-q quantile of the distribution
     
     Output, bool: True if the null is rejected and False if there is not enough evidence
     """
-    population_2_up = population_2 + threshold
-    population_2_low = population_2 - threshold
+    population_2_up = population_2 + window_size/2.
+    population_2_low = population_2 - window_size/2.
 
     p_value_up = stats.ttest_rel(population_1, population_2_up, alternative="less")[1]
     p_value_low = stats.ttest_rel(population_1, population_2_low, alternative="greater")[1]
 
-    test_up = p_value_up < quantile
-    test_low = p_value_low < quantile
+    test_up = p_value_up < critical_quantile
+    test_low = p_value_low < critical_quantile
 
     if test_low and test_up:
-        print("null hypothesis rejected at a level of significance", quantile)
+        print("null hypothesis rejected at a level of significance", critical_quantile)
         return True, max(p_value_low, p_value_up)
     else:
         print("not enough evidence to reject null hypothesis")
         return False, max(p_value_low, p_value_up)
 
 
-def paired_wilcoxon(population_1, population_2, alternative, quantile=.05):
+def paired_wilcoxon(population_1, population_2, alternative, critical_quantile):
     """
     Computes the result of the Wilcoxon rank-sum given 2 groups of observations and a level of significance
 
@@ -67,15 +67,15 @@ def paired_wilcoxon(population_1, population_2, alternative, quantile=.05):
 
     stat, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
 
-    if p_value > quantile:
+    if p_value > critical_quantile:
         return False, p_value
     else:
         return True, p_value
 
 
-def equivalence_wilcoxon(population_1, population_2, threshold=0.1, quantile=0.05):
+def equivalence_wilcoxon(population_1, population_2, window_size, critical_quantile):
     """
-    Computes the equivalence test to show that mean 2 - threshold < mean 1 < mean 2 + threshold
+    Computes the equivalence test to show that mean 2 - window_size/2 < mean 1 < mean 2 + window_size/2
 
     Inputs:
         - population_1, np.array 1D: an array of 1 dimension with the observations of 1st group
@@ -85,17 +85,17 @@ def equivalence_wilcoxon(population_1, population_2, threshold=0.1, quantile=0.0
 
     Output, bool: True if the null is rejected and False if there is not enough evidence
     """
-    population_2_up = population_2 + threshold
-    population_2_low = population_2 - threshold
+    population_2_up = population_2 + window_size/2.
+    population_2_low = population_2 - window_size/2.
 
     p_value_up = stats.wilcoxon(population_1, population_2_up, alternative="less")[1]
     p_value_low = stats.wilcoxon(population_1, population_2_low, alternative="greater")[1]
 
-    test_up = p_value_up < quantile
-    test_low = p_value_low < quantile
+    test_up = p_value_up < critical_quantile
+    test_low = p_value_low < critical_quantile
 
     if test_low and test_up:
-        print("null hypothesis rejected at a level of significance", quantile)
+        print("null hypothesis rejected at a level of significance", critical_quantile)
         return True, max(p_value_low, p_value_up)
     else:
         print("not enough evidence to reject null hypothesis")
