@@ -89,45 +89,45 @@ def test_metamorphic_invariance_regression(
 
 
 
-@pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction',
-                        [(0.5, 0.5, 0, 1e-2, 'Invariant'),
-                        (0.5, 0.5, 0.1, 0.1, 'Increasing'),
-                        (0.5, 0.5, -0.1, 0.1, 'Decreasing')])
+@pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile',
+                        [(0.5, 0.5, 0, 1e-2, 'Invariant', 0.2, 0.05),
+                        (0.5, 0.5, 0.1, 0.1, 'Increasing', float("nan"), 0.05),
+                        (0.5, 0.5, -0.1, 0.1, 'Decreasing', float("nan"), 0.05)])
 
-def test_metamorphic_compare_t_tests(loc_pop, scale_pop, loc_perturb, scale_perturb, direction):
+def test_metamorphic_compare_t_test(loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile):
     population = np.random.normal(loc_pop, scale_pop, size=100)
     perturbation = np.random.normal(loc_perturb, scale_perturb, size=100)
     print(perturbation)
 
-    result_inc, p_value_inc = paired_t_test(population, population+perturbation, alternative="less")
-    result_dec, p_value_dec = paired_t_test(population, population+perturbation, alternative="greater")
-    result_inv, p_value_inv = equivalence_t_test(population, population+perturbation)
+    result_inc, p_value_inc = paired_t_test(population, population+perturbation, alternative="less", critical_quantile=critical_quantile)
+    result_dec, p_value_dec = paired_t_test(population, population+perturbation, alternative="greater", critical_quantile=critical_quantile)
+    result_inv, p_value_inv = equivalence_t_test(population, population+perturbation, window_size=window_size, critical_quantile=critical_quantile)
 
     dict_mapping = {'Invariant':  (result_inv, p_value_inv),
                     'Decreasing': (result_dec, p_value_dec),
                     'Increasing': (result_inc, p_value_inc)}
 
     print(f'Direction: {direction} and p_value; {dict_mapping[direction][1]}')
-    assert dict_mapping[direction][1] < 0.05
+    assert dict_mapping[direction][1] < critical_quantile
 
 
-@pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction',
-                        [(0.5, 0.5, 0, 1e-2, 'Invariant'),
-                        (0.5, 0.5, 0.1, 0.1, 'Increasing'),
-                        (0.5, 0.5, -0.1, 0.1, 'Decreasing')])
+@pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile',
+                        [(0.5, 0.5, 0, 1e-2, 'Invariant', 0.2, 0.05),
+                        (0.5, 0.5, 0.1, 0.1, 'Increasing', float("nan"), 0.05),
+                        (0.5, 0.5, -0.1, 0.1, 'Decreasing', float("nan"), 0.05)])
 
-def test_metamorphic_compare_wilcoxon_tests(loc_pop, scale_pop, loc_perturb, scale_perturb, direction):
+def test_metamorphic_compare_wilcoxon(loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile):
     population = np.random.normal(loc_pop, scale_pop, size=100)
     perturbation = np.random.normal(loc_perturb, scale_perturb, size=100)
     print(perturbation)
 
-    result_inc, p_value_inc = paired_wilcoxon(population, population+perturbation, alternative="less")
-    result_dec, p_value_dec = paired_wilcoxon(population, population+perturbation, alternative="greater")
-    result_inv, p_value_inv = equivalence_wilcoxon(population, population+perturbation)
+    result_inc, p_value_inc = paired_wilcoxon(population, population+perturbation, alternative="less", critical_quantile=critical_quantile)
+    result_dec, p_value_dec = paired_wilcoxon(population, population+perturbation, alternative="greater", critical_quantile=critical_quantile)
+    result_inv, p_value_inv = equivalence_wilcoxon(population, population+perturbation, window_size=window_size, critical_quantile=critical_quantile)
 
     dict_mapping = {'Invariant':  (result_inv, p_value_inv),
                     'Decreasing': (result_dec, p_value_dec),
                     'Increasing': (result_inc, p_value_inc)}
 
     print(f'Direction: {direction} and p_value; {dict_mapping[direction][1]}')
-    assert dict_mapping[direction][1] < 0.05
+    assert dict_mapping[direction][1] < critical_quantile
