@@ -127,7 +127,8 @@ def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
                 df=ds.df,
                 column_types=ds.column_types,
                 feature_names=model.feature_names,
-                model_name=model_name
+                model_name=model_name,
+                target='default'
             )
 
         # Error Scenario: Target has values not declared in Classification Label
