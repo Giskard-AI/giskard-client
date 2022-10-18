@@ -50,7 +50,7 @@ def german_credit_data() -> GiskardDataset:
             na_values=["_GSK_NA_"],
         ),
         target="default",
-        column_types=input_types,
+        feature_types=input_types,
     )
 
 
@@ -90,7 +90,7 @@ def german_credit_catboost(german_credit_data) -> GiskardModel:
 def german_credit_test_data(german_credit_data):
     return GiskardDataset(
         df=pd.DataFrame(german_credit_data.df).drop(columns=["default"]),
-        column_types=input_types,
+        feature_types=input_types,
         target=None,
     )
 

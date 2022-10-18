@@ -13,10 +13,12 @@ class GiskardDataset:
         self,
         df: pd.DataFrame,
         target: Optional[str],
+        feature_types: Dict[str, str],
         column_types: Dict[str, str] = None,
     ) -> None:
         self.df = df
         self.target = target
+        self.feature_types = feature_types
         self.column_types = column_types
 
     @property

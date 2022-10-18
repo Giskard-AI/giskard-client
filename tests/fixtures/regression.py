@@ -46,7 +46,7 @@ def diabetes_dataset():
     diabetes = datasets.load_diabetes()
     return GiskardDataset(
         df=datasets.load_diabetes(as_frame=True)["data"],
-        column_types={feature: "numeric" for feature in diabetes["feature_names"]},
+        feature_types={feature: "numeric" for feature in diabetes["feature_names"]},
         target="target",
     )
 
@@ -58,6 +58,6 @@ def diabetes_dataset_with_target():
     data["target"] = loaded["target"]
     return GiskardDataset(
         df=data,
-        column_types={feature: "numeric" for feature in list(data.columns)},
+        feature_types={feature: "numeric" for feature in list(data.columns)},
         target="target",
     )
