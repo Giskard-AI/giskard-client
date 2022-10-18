@@ -393,8 +393,10 @@ class MetamorphicTests(AbstractTestCollection):
                 TRUE if the p-value of the t-test between (A) and (B) is below the critical value
         """
 
-        assert model.model_type != "classification" or classification_label in model.classification_labels, \
-            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+        assert (
+            model.model_type != "classification"
+            or str(classification_label) in model.classification_labels
+        ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
         return self._test_metamorphic_t_test(flag='Decreasing',
                                           actual_slice=df,
@@ -444,8 +446,11 @@ class MetamorphicTests(AbstractTestCollection):
                 TRUE if the p-value of the t-test between (A) and (B) is below the critical value
         """
 
-        assert model.model_type != "classification" or classification_label in model.classification_labels, \
-            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+        assert (
+            model.model_type != "classification"
+            or str(classification_label) in model.classification_labels
+        ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+
 
         return self._test_metamorphic_t_test(flag='Increasing',
                                           actual_slice=df,
@@ -537,7 +542,7 @@ class MetamorphicTests(AbstractTestCollection):
          return self.save_results(SingleTestResult(
              actual_slices_size=[len(actual_slice)],
              metric=p_value,
-             passed=p_value < threshold,
+             passed=p_value < critical_quantile,
              messages=messages))
 
     def test_metamorphic_decreasing_wilcoxon(self,
@@ -580,8 +585,10 @@ class MetamorphicTests(AbstractTestCollection):
                 TRUE if the p-value of the Wilcoxon signed-rank test between (A) and (B) is below the critical value
         """
 
-        assert model.model_type != "classification" or classification_label in model.classification_labels, \
-            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+        assert (
+            model.model_type != "classification"
+            or str(classification_label) in model.classification_labels
+        ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
         return self._test_metamorphic_wilcoxon(flag='Decreasing',
                                           actual_slice=df,
@@ -631,8 +638,10 @@ class MetamorphicTests(AbstractTestCollection):
                 TRUE if the p-value of the Wilcoxon signed-rank test between (A) and (B) is below the critical value
         """
 
-        assert model.model_type != "classification" or classification_label in model.classification_labels, \
-            f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
+        assert (
+            model.model_type != "classification"
+            or str(classification_label) in model.classification_labels
+        ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
         return self._test_metamorphic_wilcoxon(flag='Increasing',
                                           actual_slice=df,
