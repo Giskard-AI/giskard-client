@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from giskard.client.project import GiskardProject
+
 data = np.array(["g", "e", "e", "k", "s"])
 
 
@@ -48,8 +49,11 @@ def _test_prediction_function(data):
     return np.random.rand(5, 1)
 
 
+prev_pred = _test_prediction_function(data)
+
+
 @pytest.mark.parametrize('data,prev_prediction,prediction_function', [
-    (pd.DataFrame(data), _test_prediction_function, _test_prediction_function)
+    (pd.DataFrame(data), prev_pred, _test_prediction_function)
 ])
 def test_validate_deterministic_model(data, prev_prediction, prediction_function):
     with pytest.raises(AssertionError):
