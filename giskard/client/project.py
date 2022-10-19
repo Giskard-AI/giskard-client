@@ -471,7 +471,7 @@ class GiskardProject:
                 "message before uploading in Giskard"
             )
         min_num_rows = min(len(df), 5)
-        GiskardProject._validate_deterministic_model(df.head(min_num_rows),
+        GiskardProject._validate_deterministic_model(df.iloc[:min_num_rows],
                                                      prediction[:min_num_rows],
                                                      prediction_function)
         GiskardProject._validate_prediction_output(df, model_type, prediction)
@@ -553,7 +553,7 @@ class GiskardProject:
         Asserts if the model is deterministic by asserting previous and current prediction on same data
         """
         new_prediction = prediction_function(sample_df)
-        assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
+        assert np.allclose(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
