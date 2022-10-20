@@ -12,6 +12,16 @@ import pkg_resources
 import psutil
 import tqdm
 from eli5.lime import TextExplainer
+
+from giskard.ml_worker.core.giskard_dataset import GiskardDataset
+from giskard.ml_worker.core.model_explanation import (
+    explain,
+    parse_text_explainer_response,
+    text_explanation_prediction_wrapper,
+)
+from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
+from giskard.ml_worker.exceptions.giskard_exception import GiskardException
+from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.generated.ml_worker_pb2 import (
     DataFrame,
     DataRow,
@@ -32,16 +42,6 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     UploadStatus,
     UploadStatusCode, FileUploadMetadata, FileType, )
 from giskard.ml_worker.generated.ml_worker_pb2_grpc import MLWorkerServicer
-
-from giskard.ml_worker.core.giskard_dataset import GiskardDataset
-from giskard.ml_worker.core.model_explanation import (
-    explain,
-    parse_text_explainer_response,
-    text_explanation_prediction_wrapper,
-)
-from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
-from giskard.ml_worker.exceptions.giskard_exception import GiskardException
-from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.utils.grpc_mapper import deserialize_dataset, deserialize_model
 from giskard.ml_worker.utils.logging import Timer
 from giskard.path_utils import model_path, dataset_path
@@ -93,6 +93,7 @@ class MLWorkerServiceImpl(MLWorkerServicer):
                     break
             elif upload_msg.HasField("chunk"):
                 try:
+                    path.parent.mkdir(exist_ok=True, parents=True)
                     with open(path, 'ab') as f:
                         f.write(upload_msg.chunk.content)
                     progress.update(len(upload_msg.chunk.content))
@@ -138,9 +139,9 @@ class MLWorkerServiceImpl(MLWorkerServicer):
 
         tests = GiskardTestFunctions()
         _globals = {"model": model, "tests": tests}
-        if request.reference_ds.serialized_df:
+        if request.reference_ds.file_name:
             _globals["reference_ds"] = deserialize_dataset(request.reference_ds)
-        if request.actual_ds.serialized_df:
+        if request.actual_ds.file_name:
             _globals["actual_ds"] = deserialize_dataset(request.actual_ds)
         try:
             timer = Timer()
