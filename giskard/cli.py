@@ -52,6 +52,10 @@ def start_stop_options(fn):
         help="Remote Giskard port accepting external ML Worker connections",
     )(fn)
     fn = click.option(
+        "--silent", "is_silent", is_flag=True, default=False,
+        help="If true, this option will not ask you to update your git test repository"
+    )(fn)
+    fn = click.option(
         "--verbose",
         "-v",
         is_flag=True,
@@ -74,7 +78,7 @@ def start_stop_options(fn):
     default=False,
     help="Should ML Worker be started as a Daemon in a background",
 )
-def start_command(host, port, is_server, is_daemon):
+def start_command(host, port, is_server, is_daemon, is_silent):
     """\b
     Start ML Worker.
 
@@ -85,10 +89,10 @@ def start_command(host, port, is_server, is_daemon):
     - client: ML Worker acts as a client and should connect to a running Giskard instance
         by specifying this instance's host and port.
     """
-    _start_command(is_server, host, port, is_daemon)
+    _start_command(is_server, is_silent, host, port, is_daemon)
 
 
-def _start_command(is_server, host, port, is_daemon):
+def _start_command(is_server, is_silent, host, port, is_daemon):
     token = click.prompt("Please enter an API Access Token")
     host_name = urlparse(host).hostname
     start_msg = "Starting ML Worker"
@@ -107,7 +111,7 @@ def _start_command(is_server, host, port, is_daemon):
             run_daemon(is_server, host_name, port)
         else:
             loop = asyncio.new_event_loop()
-            loop.create_task(start_ml_worker(is_server, host, port, token))
+            loop.create_task(start_ml_worker(is_server, is_silent, host, port, token))
             loop.run_forever()
     except KeyboardInterrupt:
         logger.info("Exiting")

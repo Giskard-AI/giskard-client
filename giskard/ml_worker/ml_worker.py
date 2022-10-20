@@ -33,7 +33,7 @@ async def _start_grpc_server(is_server=False):
     return server, port
 
 
-async def start_ml_worker(is_server=False, remote_host=None, remote_port=None, token=None):
+async def start_ml_worker(is_server=False, is_silent=False,remote_host=None, remote_port=None, token=None):
     from giskard.ml_worker.bridge.ml_worker_bridge import MLWorkerBridge
     url = f'{remote_host}/api/v2/settings/general'
     host_name = urlparse(remote_host).hostname
@@ -43,7 +43,7 @@ async def start_ml_worker(is_server=False, remote_host=None, remote_port=None, t
     res_json = res.json()
     if remote_port is None:
         remote_port = res_json['externalMlWorkerEntrypointPort']
-    clone_git_testing_repository(res_json['generalSettings']['instanceId'])
+    clone_git_testing_repository(res_json['generalSettings']['instanceId'], is_silent)
     tasks = []
     server, grpc_server_port = await _start_grpc_server(is_server)
     if not is_server:
