@@ -11,12 +11,14 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     SerializedGiskardModel,
 )
 from giskard.ml_worker.utils.logging import timer
-from giskard.path_utils import model_dir
+from giskard.path_utils import model_path
 
 
 @timer()
 def deserialize_model(serialized_model: SerializedGiskardModel) -> GiskardModel:
-    model_stream = open(model_dir(serialized_model.project_key, serialized_model.file_name), 'rb')
+    mp = model_path(serialized_model.project_key, serialized_model.file_name)
+    assert mp.exists(), f"Model is not uploaded: {mp}"
+    model_stream = open(mp, 'rb')
 
     deserialized_model = GiskardModel(
         cloudpickle.load(

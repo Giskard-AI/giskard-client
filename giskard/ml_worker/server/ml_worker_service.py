@@ -12,16 +12,6 @@ import pkg_resources
 import psutil
 import tqdm
 from eli5.lime import TextExplainer
-
-from giskard.ml_worker.core.giskard_dataset import GiskardDataset
-from giskard.ml_worker.core.model_explanation import (
-    explain,
-    parse_text_explainer_response,
-    text_explanation_prediction_wrapper,
-)
-from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
-from giskard.ml_worker.exceptions.giskard_exception import GiskardException
-from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.generated.ml_worker_pb2 import (
     DataFrame,
     DataRow,
@@ -42,9 +32,19 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     UploadStatus,
     UploadStatusCode, FileUploadMetadata, FileType, )
 from giskard.ml_worker.generated.ml_worker_pb2_grpc import MLWorkerServicer
+
+from giskard.ml_worker.core.giskard_dataset import GiskardDataset
+from giskard.ml_worker.core.model_explanation import (
+    explain,
+    parse_text_explainer_response,
+    text_explanation_prediction_wrapper,
+)
+from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
+from giskard.ml_worker.exceptions.giskard_exception import GiskardException
+from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.utils.grpc_mapper import deserialize_dataset, deserialize_model
 from giskard.ml_worker.utils.logging import Timer
-from giskard.path_utils import model_dir, dataset_dir
+from giskard.path_utils import model_path, dataset_path
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,9 @@ echo_count = 1
 
 def file_already_exists(meta: FileUploadMetadata):
     if meta.file_type == FileType.MODEL:
-        path = model_dir(meta.project_key, meta.name)
+        path = model_path(meta.project_key, meta.name)
     elif meta.file_type == FileType.DATASET:
-        path = dataset_dir(meta.project_key, meta.name)
+        path = dataset_path(meta.project_key, meta.name)
     else:
         raise ValueError(f"Illegal file type: {meta.file_type}")
     return path.exists(), path
@@ -74,31 +74,36 @@ class MLWorkerServiceImpl(MLWorkerServicer):
     def upload(self, request_iterator: collections.abc.Iterator[ml_worker_pb2.FileUploadRequest],
                context: grpc.ServicerContext):
         meta = None
+        path = None
         progress = None
         for upload_msg in request_iterator:
             if upload_msg.HasField("metadata"):
                 meta = upload_msg.metadata
-                progress = tqdm.tqdm(
-                    f"Receiving {upload_msg.metadata.name}",
-                    unit="B",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                )
                 file_exists, path = file_already_exists(meta)
                 if not file_exists:
+                    progress = tqdm.tqdm(
+                        desc=f"Receiving {upload_msg.metadata.name}",
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                    )
                     yield UploadStatus(code=UploadStatusCode.CacheMiss)
                 else:
                     logger.info(f"File already exists: {path}")
                     break
             elif upload_msg.HasField("chunk"):
                 try:
+                    with open(path, 'ab') as f:
+                        f.write(upload_msg.chunk.content)
                     progress.update(len(upload_msg.chunk.content))
                 except Exception as e:
-                    progress.close()
+                    if progress is not None:
+                        progress.close()
                     logger.exception(f"Failed to upload file {meta.name}", e)
                     yield UploadStatus(code=UploadStatusCode.Failed)
 
-        progress.close()
+        if progress is not None:
+            progress.close()
         yield UploadStatus(code=UploadStatusCode.Ok)
 
     def getInfo(self, request: MLWorkerInfoRequest, context):
@@ -125,7 +130,6 @@ class MLWorkerServiceImpl(MLWorkerServicer):
             internal_grpc_port=self.port,
             is_remote=self.remote,
         )
-
 
     def runTest(self, request: RunTestRequest, context: grpc.ServicerContext) -> TestResultMessage:
         from giskard.ml_worker.testing.functions import GiskardTestFunctions
@@ -256,7 +260,6 @@ class MLWorkerServiceImpl(MLWorkerServicer):
         return RunModelResponse(
             results_csv=results.to_csv(index=False), calculated_csv=calculated.to_csv(index=False)
         )
-
 
     @staticmethod
     def pandas_df_to_proto_df(df):
