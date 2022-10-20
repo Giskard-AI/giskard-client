@@ -39,7 +39,7 @@ async def start_ml_worker(is_server=False, is_silent=False,remote_host=None, rem
     host_name = urlparse(remote_host).hostname
     res = requests.get(url, headers={"Authorization": f"Bearer {token}"})
     if res.status_code == 401:
-        raise Exception("Wrong Token")
+        raise Exception("Wrong Token") # Not shure of what exception
     res_json = res.json()
     if remote_port is None:
         remote_port = res_json['externalMlWorkerEntrypointPort']

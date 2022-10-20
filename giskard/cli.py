@@ -151,9 +151,9 @@ def stop_command(is_server, host, port, stop_all):
 
 @worker.command("restart", help="Restart ML Worker")
 @start_stop_options
-def restart_command(is_server, host, port):
+def restart_command(is_server, is_silent, host, port):
     _find_and_stop(is_server, host, port)
-    _start_command(is_server, host, port, is_daemon=True)
+    _start_command(is_server, is_silent, host, port, is_daemon=True)
 
 
 def _stop_pid_fname(pid_fname):
