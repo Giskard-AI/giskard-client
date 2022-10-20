@@ -71,8 +71,7 @@ class MLWorkerServiceImpl(MLWorkerServicer):
         globals()["echo_count"] += 1
         return EchoMsg(msg=f"Response {echo_count}: {request.msg}")
 
-    def upload(self, request_iterator: collections.abc.Iterator[ml_worker_pb2.FileUploadRequest],
-               context: grpc.ServicerContext):
+    def upload(self, request_iterator, context: grpc.ServicerContext):
         meta = None
         path = None
         progress = None
