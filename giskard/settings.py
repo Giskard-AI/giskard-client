@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from typing import Optional
 
-# from pydantic import BaseSettings
 from pydantic.env_settings import BaseSettings
 
 
