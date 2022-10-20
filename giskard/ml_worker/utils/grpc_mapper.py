@@ -11,13 +11,16 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     SerializedGiskardModel,
 )
 from giskard.ml_worker.utils.logging import timer
+from giskard.path_utils import model_dir
 
 
 @timer()
 def deserialize_model(serialized_model: SerializedGiskardModel) -> GiskardModel:
+    model_stream = open(model_dir(serialized_model.project_key, serialized_model.file_name), 'rb')
+
     deserialized_model = GiskardModel(
         cloudpickle.load(
-            ZstdDecompressor().stream_reader(serialized_model.serialized_prediction_function)
+            ZstdDecompressor().stream_reader(model_stream)
         ),
         model_type=serialized_model.model_type,
         classification_threshold=serialized_model.threshold.value
