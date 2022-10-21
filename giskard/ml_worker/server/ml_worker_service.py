@@ -1,3 +1,4 @@
+import collections.abc
 import logging
 import os
 import platform
@@ -18,8 +19,9 @@ from giskard.ml_worker.core.model_explanation import (
     parse_text_explainer_response,
     text_explanation_prediction_wrapper,
 )
-from giskard.ml_worker.exceptions.giskard_exception import GiskardException
 from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
+from giskard.ml_worker.exceptions.giskard_exception import GiskardException
+from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.generated.ml_worker_pb2 import (
     DataFrame,
     DataRow,
@@ -28,7 +30,6 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     ExplainResponse,
     ExplainTextRequest,
     ExplainTextResponse,
-    FileUploadRequest,
     MLWorkerInfo,
     MLWorkerInfoRequest,
     PlatformInfo,
@@ -39,15 +40,25 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     RunTestRequest,
     TestResultMessage,
     UploadStatus,
-    UploadStatusCode,
-)
+    UploadStatusCode, FileUploadMetadata, FileType, )
 from giskard.ml_worker.generated.ml_worker_pb2_grpc import MLWorkerServicer
 from giskard.ml_worker.utils.grpc_mapper import deserialize_dataset, deserialize_model
 from giskard.ml_worker.utils.logging import Timer
+from giskard.path_utils import model_path, dataset_path
 
 logger = logging.getLogger(__name__)
 
-cnt = 1
+echo_count = 1
+
+
+def file_already_exists(meta: FileUploadMetadata):
+    if meta.file_type == FileType.MODEL:
+        path = model_path(meta.project_key, meta.name)
+    elif meta.file_type == FileType.DATASET:
+        path = dataset_path(meta.project_key, meta.name)
+    else:
+        raise ValueError(f"Illegal file type: {meta.file_type}")
+    return path.exists(), path
 
 
 class MLWorkerServiceImpl(MLWorkerServicer):
@@ -57,25 +68,43 @@ class MLWorkerServiceImpl(MLWorkerServicer):
         self.remote = remote
 
     def echo(self, request, context):
-        globals()["cnt"] += 1
-        return EchoMsg(msg=f"Response {cnt}: {request.msg}")
+        globals()["echo_count"] += 1
+        return EchoMsg(msg=f"Response {echo_count}: {request.msg}")
 
-    def upload(self, request_iterator, context):
-        upload_message: FileUploadRequest
+    def upload(self, request_iterator, context: grpc.ServicerContext):
+        meta = None
+        path = None
         progress = None
-        for upload_message in request_iterator:
-            if upload_message.HasField("metadata"):
-                print(upload_message.metadata.name)
-                progress = tqdm.tqdm(
-                    f"Receiving {upload_message.metadata.name}",
-                    unit="B",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                )
-            elif upload_message.HasField("chunk"):
-                progress.update(len(upload_message.chunk.content))
-        progress.close()
-        return UploadStatus(code=UploadStatusCode.Ok)
+        for upload_msg in request_iterator:
+            if upload_msg.HasField("metadata"):
+                meta = upload_msg.metadata
+                file_exists, path = file_already_exists(meta)
+                if not file_exists:
+                    progress = tqdm.tqdm(
+                        desc=f"Receiving {upload_msg.metadata.name}",
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                    )
+                    yield UploadStatus(code=UploadStatusCode.CacheMiss)
+                else:
+                    logger.info(f"File already exists: {path}")
+                    break
+            elif upload_msg.HasField("chunk"):
+                try:
+                    path.parent.mkdir(exist_ok=True, parents=True)
+                    with open(path, 'ab') as f:
+                        f.write(upload_msg.chunk.content)
+                    progress.update(len(upload_msg.chunk.content))
+                except Exception as e:
+                    if progress is not None:
+                        progress.close()
+                    logger.exception(f"Failed to upload file {meta.name}", e)
+                    yield UploadStatus(code=UploadStatusCode.Failed)
+
+        if progress is not None:
+            progress.close()
+        yield UploadStatus(code=UploadStatusCode.Ok)
 
     def getInfo(self, request: MLWorkerInfoRequest, context):
         installed_packages = (
@@ -109,9 +138,9 @@ class MLWorkerServiceImpl(MLWorkerServicer):
 
         tests = GiskardTestFunctions()
         _globals = {"model": model, "tests": tests}
-        if request.reference_ds.serialized_df:
+        if request.reference_ds.file_name:
             _globals["reference_ds"] = deserialize_dataset(request.reference_ds)
-        if request.actual_ds.serialized_df:
+        if request.actual_ds.file_name:
             _globals["actual_ds"] = deserialize_dataset(request.actual_ds)
         try:
             timer = Timer()

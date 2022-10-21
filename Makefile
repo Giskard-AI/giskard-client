@@ -39,7 +39,7 @@ build: install
 
 GENERATED_OUT:=giskard/ml_worker/generated
 .PHONY: generate-proto
-generate-proto:
+generate-proto: proto-remove
 	rm -rf $(GENERATED_OUT) && mkdir -p $(GENERATED_OUT) && \
 	source .venv/bin/activate && \
 	python -m grpc_tools.protoc \
@@ -47,6 +47,7 @@ generate-proto:
       --python_out=$(GENERATED_OUT) \
       --grpc_python_out=$(GENERATED_OUT) \
       --mypy_out=$(GENERATED_OUT) \
+      --mypy_grpc_out=$(GENERATED_OUT) \
       ml-worker-proto/proto/ml-worker.proto && \
     python scripts/fix_grpc_generated_imports.py $(GENERATED_OUT) giskard.ml_worker.generated
 

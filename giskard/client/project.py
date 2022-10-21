@@ -249,7 +249,7 @@ class GiskardProject:
         self._validate_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
-        self.validate_columns_columntypes(df, column_types)
+        self.validate_columns_columntypes(df, column_types, target)
         self._validate_column_types(column_types)
         self._validate_category_columns(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
@@ -457,10 +457,10 @@ class GiskardProject:
         if target is not None and target in df.columns:
             df = df.drop(target, axis=1)
         try:
-            prediction_function(df.iloc[[0]])
+            prediction_function(df.head(1))
         except Exception:
             raise ValueError("Invalid prediction_function input.\n"
-                             "Please make sure that prediction_function(df.iloc[[0]]) does not return an error "
+                             "Please make sure that prediction_function(df.head(1)) does not return an error "
                              "message before uploading in Giskard")
         try:
             prediction = prediction_function(df)
@@ -499,7 +499,7 @@ class GiskardProject:
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
             warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
                           "The output of Multiclass and Binary classifications should be within the range [0,1]"
-            )
+                          )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
             warnings.warn("Sum of output values of prediction_function is not equal to 1."
                           " For Multiclass and Binary classifications, the sum of probabilities should be 1")
@@ -509,7 +509,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def validate_columns_columntypes(df: pd.DataFrame, column_types) -> pd.DataFrame:
+    def validate_columns_columntypes(df: pd.DataFrame, column_types, target) -> pd.DataFrame:
         if not set(column_types.keys()).issubset(set(df.columns)):
             missing_columns = set(column_types.keys()) - set(df.columns)
             raise ValueError(
@@ -517,21 +517,24 @@ class GiskardProject:
             )
         elif not set(df.columns).issubset(set(column_types.keys())):
             missing_columns = set(df.columns) - set(column_types.keys())
-            raise ValueError(
-                f"Invalid column_types parameter: Please declare the type for "
-                f"{missing_columns} columns"
-            )
-        else:
-            pandas_inferred_column_types = df.dtypes.to_dict()
-            for column, dtype in pandas_inferred_column_types.items():
-                if (
-                        column_types.get(column) == SupportedColumnType.NUMERIC.value
-                        and dtype == "object"
-                ):
-                    try:
-                        df[column] = df[column].astype(float)
-                    except Exception as e:
-                        raise ValueError(f"Failed to convert column '{column}' to float") from e
+            if target in missing_columns:
+                missing_columns.remove(target)
+            if missing_columns:
+                raise ValueError(
+                    f"Invalid column_types parameter: Please declare the type for "
+                    f"{missing_columns} columns"
+                )
+
+        pandas_inferred_column_types = df.dtypes.to_dict()
+        for column, dtype in pandas_inferred_column_types.items():
+            if (
+                    column_types.get(column) == SupportedColumnType.NUMERIC.value
+                    and dtype == "object"
+            ):
+                try:
+                    df[column] = df[column].astype(float)
+                except Exception as e:
+                    raise ValueError(f"Failed to convert column '{column}' to float") from e
             return df
 
     @staticmethod

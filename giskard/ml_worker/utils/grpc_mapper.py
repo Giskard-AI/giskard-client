@@ -1,8 +1,6 @@
-from io import BytesIO
-
 import cloudpickle
 import pandas as pd
-from zstandard import ZstdDecompressor, decompress
+from zstandard import ZstdDecompressor
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model import GiskardModel
@@ -11,13 +9,18 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     SerializedGiskardModel,
 )
 from giskard.ml_worker.utils.logging import timer
+from giskard.path_utils import model_path
 
 
 @timer()
 def deserialize_model(serialized_model: SerializedGiskardModel) -> GiskardModel:
+    mp = model_path(serialized_model.project_key, serialized_model.file_name)
+    assert mp.exists(), f"Model is not uploaded: {mp}"
+    model_stream = open(mp, 'rb')
+
     deserialized_model = GiskardModel(
         cloudpickle.load(
-            ZstdDecompressor().stream_reader(serialized_model.serialized_prediction_function)
+            ZstdDecompressor().stream_reader(model_stream)
         ),
         model_type=serialized_model.model_type,
         classification_threshold=serialized_model.threshold.value
@@ -32,9 +35,13 @@ def deserialize_model(serialized_model: SerializedGiskardModel) -> GiskardModel:
 
 @timer()
 def deserialize_dataset(serialized_dataset: SerializedGiskardDataset) -> GiskardDataset:
+    mp = model_path(serialized_dataset.project_key, serialized_dataset.file_name)
+    assert mp.exists(), f"Dataset is not uploaded: {mp}"
+    ds_stream = open(mp, 'rb')
+
     deserialized_dataset = GiskardDataset(
         df=pd.read_csv(
-            BytesIO(decompress(serialized_dataset.serialized_df)),
+            ZstdDecompressor().stream_reader(ds_stream),
             keep_default_na=False,
             na_values=["_GSK_NA_"],
         ),
