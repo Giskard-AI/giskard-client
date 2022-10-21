@@ -51,7 +51,7 @@ def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
 
 
 def background_example(df: pd.DataFrame, input_types: Dict[str, str]) -> pd.DataFrame:
-    example = df.mode(dropna=False).iloc[[0]]  # si plusieurs modes, on prend le premier
+    example = df.mode(dropna=False).head(1)  # si plusieurs modes, on prend le premier
     example.fillna("", inplace=True)
     median = df.median()
     num_columns = [key for key in list(df.columns) if input_types.get(key) == "numeric"]
