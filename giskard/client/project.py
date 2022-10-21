@@ -499,7 +499,7 @@ class GiskardProject:
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
             warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
                           "The output of Multiclass and Binary classifications should be within the range [0,1]"
-            )
+                          )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
             warnings.warn("Sum of output values of prediction_function is not equal to 1."
                           " For Multiclass and Binary classifications, the sum of probabilities should be 1")
@@ -517,7 +517,9 @@ class GiskardProject:
             )
         elif not set(df.columns).issubset(set(column_types.keys())):
             missing_columns = set(df.columns) - set(column_types.keys())
-            if missing_columns != {target}:
+            if target in missing_columns:
+                missing_columns.remove(target)
+            if missing_columns:
                 raise ValueError(
                     f"Invalid column_types parameter: Please declare the type for "
                     f"{missing_columns} columns"
