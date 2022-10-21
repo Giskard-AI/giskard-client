@@ -31,7 +31,7 @@ def test_upload_df(diabetes_dataset: GiskardDataset):
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(
             df=diabetes_dataset.df,
-            column_types=diabetes_dataset.column_types,
+            column_types=diabetes_dataset.feature_types,
             target=diabetes_dataset.target,
             name=dataset_name,
         )
@@ -125,9 +125,10 @@ def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
                 prediction_function=model.prediction_function,
                 model_type=model.model_type,
                 df=ds.df,
-                column_types=ds.column_types,
+                column_types=ds.feature_types,
                 feature_names=model.feature_names,
-                model_name=model_name
+                model_name=model_name,
+                target='default'
             )
 
         # Error Scenario: Target has values not declared in Classification Label
@@ -137,7 +138,7 @@ def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
                 model_type=model.model_type,
                 target='default',
                 df=ds.df,
-                column_types=ds.column_types,
+                column_types=ds.feature_types,
                 feature_names=model.feature_names,
                 model_name=model_name,
                 classification_labels=[0, 1]
