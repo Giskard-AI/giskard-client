@@ -8,6 +8,7 @@ from giskard.ml_worker.testing.utils import apply_perturbation_inplace
 from giskard.ml_worker.utils.logging import timer
 from giskard.ml_worker.testing.stat_utils import equivalence_t_test, paired_t_test
 from giskard.ml_worker.testing.stat_utils import equivalence_wilcoxon, paired_wilcoxon
+from giskard.ml_worker.testing.utils import Direction
 
 
 class MetamorphicTests(AbstractTestCollection):
@@ -54,8 +55,8 @@ class MetamorphicTests(AbstractTestCollection):
         return results_df, len(modified_rows)
 
     @timer("Compare and predict the data")
-    def _compare_prediction(self, results_df, prediction_task, output_sensitivity=None, flag=None):
-        if flag == "Invariance":
+    def _compare_prediction(self, results_df, prediction_task, direction, output_sensitivity=None):
+        if direction == Direction.Invariant:
             if prediction_task == "classification":
                 passed_idx = results_df.loc[
                     results_df["prediction"] == results_df["perturbed_prediction"]
@@ -70,12 +71,12 @@ class MetamorphicTests(AbstractTestCollection):
                     results_df["predict_difference_ratio"] < output_sensitivity
                 ].index.values
 
-        elif flag == "Increasing":
+        elif direction == Direction.Increasing:
             passed_idx = results_df.loc[
                 results_df["prediction"] < results_df["perturbed_prediction"]
             ].index.values
 
-        elif flag == "Decreasing":
+        elif direction == Direction.Decreasing:
             passed_idx = results_df.loc[
                 results_df["prediction"] > results_df["perturbed_prediction"]
             ].index.values
@@ -83,35 +84,35 @@ class MetamorphicTests(AbstractTestCollection):
         failed_idx = results_df.loc[~results_df.index.isin(passed_idx)].index.values
         return passed_idx, failed_idx
 
-    def _compare_probabilities_t_test(self, result_df, flag=None, window_size=0.1, critical_quantile=0.05):
+    def _compare_probabilities_t_test(self, result_df, direction, window_size=0.1, critical_quantile=0.05):
 
-          if flag == 'Invariance':
+          if direction == Direction.Invariant:
               p_value = equivalence_t_test(result_df['prediction'], result_df['perturbed_prediction'], window_size=window_size, critical_quantile=critical_quantile)[1]
 
-          elif flag == 'Increasing':
+          elif direction == Direction.Increasing:
               p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='less', critical_quantile=critical_quantile)[1]
 
-          elif flag == 'Decreasing':
+          elif direction == Direction.Decreasing:
               p_value = paired_t_test(result_df['prediction'], result_df['perturbed_prediction'], alternative='greater', critical_quantile=critical_quantile)[1]
 
           return p_value
 
-    def _compare_probabilities_wilcoxon(self, result_df, flag=None, window_size=0.2, critical_quantile=0.05):
+    def _compare_probabilities_wilcoxon(self, result_df, direction, window_size=0.2, critical_quantile=0.05):
 
-          if flag == 'Invariance':
+          if direction == Direction.Invariant:
               p_value = equivalence_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], window_size=window_size, critical_quantile=critical_quantile)[1]
 
-          elif flag == 'Increasing':
+          elif direction == Direction.Increasing:
               p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='less', critical_quantile=critical_quantile)[1]
 
-          elif flag == 'Decreasing':
+          elif direction == Direction.Decreasing:
               p_value = paired_wilcoxon(result_df['prediction'], result_df['perturbed_prediction'], alternative='greater', critical_quantile=critical_quantile)[1]
 
           return p_value
 
     def _test_metamorphic(
         self,
-        flag,
+        direction: Direction,
         actual_slice: GiskardDataset,
         model,
         perturbation_dict,
@@ -131,7 +132,7 @@ class MetamorphicTests(AbstractTestCollection):
         )
 
         passed_idx, failed_idx = self._compare_prediction(
-            results_df, model.model_type, output_sensitivity, flag
+            results_df, model.model_type, direction, output_sensitivity
         )
         passed_ratio = len(passed_idx) / modified_rows_count if modified_rows_count != 0 else 1
 
@@ -198,7 +199,7 @@ class MetamorphicTests(AbstractTestCollection):
         """
 
         return self._test_metamorphic(
-            flag="Invariance",
+            direction=Direction.Invariant,
             actual_slice=df,
             model=model,
             perturbation_dict=perturbation_dict,
@@ -257,7 +258,7 @@ class MetamorphicTests(AbstractTestCollection):
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
         return self._test_metamorphic(
-            flag="Increasing",
+            direction=Direction.Increasing,
             actual_slice=df,
             model=model,
             perturbation_dict=perturbation_dict,
@@ -312,7 +313,7 @@ class MetamorphicTests(AbstractTestCollection):
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
         return self._test_metamorphic(
-            flag="Decreasing",
+            direction=Direction.Decreasing,
             actual_slice=df,
             model=model,
             perturbation_dict=perturbation_dict,
@@ -322,7 +323,7 @@ class MetamorphicTests(AbstractTestCollection):
 
 
     def _test_metamorphic_t_test(self,
-                                flag,
+                                direction: Direction,
                                 actual_slice: GiskardDataset,
                                 model,
                                 perturbation_dict,
@@ -340,7 +341,7 @@ class MetamorphicTests(AbstractTestCollection):
                                                                     output_proba=output_proba,
                                                                     classification_label=classification_label)
 
-         p_value = self._compare_probabilities_t_test(result_df, flag, window_size, critical_quantile)
+         p_value = self._compare_probabilities_t_test(result_df, direction, window_size, critical_quantile)
 
          messages = [TestMessage(
              type=TestMessageType.INFO,
@@ -398,7 +399,7 @@ class MetamorphicTests(AbstractTestCollection):
             or str(classification_label) in model.classification_labels
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
-        return self._test_metamorphic_t_test(flag='Decreasing',
+        return self._test_metamorphic_t_test(direction=Direction.Decreasing,
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
@@ -452,7 +453,7 @@ class MetamorphicTests(AbstractTestCollection):
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
 
-        return self._test_metamorphic_t_test(flag='Increasing',
+        return self._test_metamorphic_t_test(direction=Direction.Increasing,
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
@@ -505,7 +506,7 @@ class MetamorphicTests(AbstractTestCollection):
                   TRUE if the p-value of the t-test between (A) and (B)+window_size/2 < critical_quantile && the p-value of the t-test between (B)-window_size/2 and (A) < critical_quantile
         """
 
-        return self._test_metamorphic_t_test(flag='Invariance',
+        return self._test_metamorphic_t_test(direction=Direction.Invariant,
                                       actual_slice=df,
                                       model=model,
                                       perturbation_dict=perturbation_dict,
@@ -514,7 +515,7 @@ class MetamorphicTests(AbstractTestCollection):
 
 
     def _test_metamorphic_wilcoxon(self,
-                                flag,
+                                direction: Direction,
                                 actual_slice: GiskardDataset,
                                 model,
                                 perturbation_dict,
@@ -532,7 +533,7 @@ class MetamorphicTests(AbstractTestCollection):
                                                                     output_proba=output_proba,
                                                                     classification_label=classification_label)
 
-         p_value = self._compare_probabilities_wilcoxon(result_df, flag, window_size, critical_quantile)
+         p_value = self._compare_probabilities_wilcoxon(result_df, direction, window_size, critical_quantile)
 
          messages = [TestMessage(
              type=TestMessageType.INFO,
@@ -590,7 +591,7 @@ class MetamorphicTests(AbstractTestCollection):
             or str(classification_label) in model.classification_labels
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
-        return self._test_metamorphic_wilcoxon(flag='Decreasing',
+        return self._test_metamorphic_wilcoxon(direction=Direction.Decreasing,
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
@@ -643,7 +644,7 @@ class MetamorphicTests(AbstractTestCollection):
             or str(classification_label) in model.classification_labels
         ), f'"{classification_label}" is not part of model labels: {",".join(model.classification_labels)}'
 
-        return self._test_metamorphic_wilcoxon(flag='Increasing',
+        return self._test_metamorphic_wilcoxon(direction=Direction.Increasing,
                                           actual_slice=df,
                                           model=model,
                                           perturbation_dict=perturbation_dict,
@@ -696,7 +697,7 @@ class MetamorphicTests(AbstractTestCollection):
                 TRUE if the p-value of the Wilcoxon signed-rank test between (A) and (B)+window_size/2 < critical_quantile && the p-value of the t-test between (B)-window_size/2 and (A) < critical_quantile
         """
 
-        return self._test_metamorphic_wilcoxon(flag='Invariance',
+        return self._test_metamorphic_wilcoxon(direction=Direction.Invariant,
                                       actual_slice=df,
                                       model=model,
                                       perturbation_dict=perturbation_dict,

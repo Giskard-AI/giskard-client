@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from giskard.ml_worker.testing.stat_utils import equivalence_t_test, paired_t_test
 from giskard.ml_worker.testing.stat_utils import equivalence_wilcoxon, paired_wilcoxon
-from giskard.ml_worker.core.giskard_dataset import GiskardDataset
+from giskard.ml_worker.testing.utils import Direction
 
 def test_metamorphic_invariance_no_change(german_credit_test_data, german_credit_model):
     perturbation = {}
@@ -90,9 +90,9 @@ def test_metamorphic_invariance_regression(
 
 
 @pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile',
-                        [(0.5, 0.5, 0, 1e-2, 'Invariant', 0.2, 0.05),
-                        (0.5, 0.5, 0.1, 0.1, 'Increasing', float("nan"), 0.05),
-                        (0.5, 0.5, -0.1, 0.1, 'Decreasing', float("nan"), 0.05)])
+                        [(0.5, 0.5, 0, 1e-2, Direction.Invariant, 0.2, 0.05),
+                        (0.5, 0.5, 0.1, 0.1, Direction.Increasing, float("nan"), 0.05),
+                        (0.5, 0.5, -0.1, 0.1, Direction.Decreasing, float("nan"), 0.05)])
 
 def test_metamorphic_compare_t_test(loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile):
     population = np.random.normal(loc_pop, scale_pop, size=100)
@@ -103,18 +103,18 @@ def test_metamorphic_compare_t_test(loc_pop, scale_pop, loc_perturb, scale_pertu
     result_dec, p_value_dec = paired_t_test(population, population+perturbation, alternative="greater", critical_quantile=critical_quantile)
     result_inv, p_value_inv = equivalence_t_test(population, population+perturbation, window_size=window_size, critical_quantile=critical_quantile)
 
-    dict_mapping = {'Invariant':  (result_inv, p_value_inv),
-                    'Decreasing': (result_dec, p_value_dec),
-                    'Increasing': (result_inc, p_value_inc)}
+    dict_mapping = {Direction.Invariant:  (result_inv, p_value_inv),
+                    Direction.Decreasing: (result_dec, p_value_dec),
+                    Direction.Increasing: (result_inc, p_value_inc)}
 
-    print(f'Direction: {direction} and p_value; {dict_mapping[direction][1]}')
+    print(f'Direction: {direction.name} and p_value; {dict_mapping[direction][1]}')
     assert dict_mapping[direction][1] < critical_quantile
 
 
 @pytest.mark.parametrize('loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile',
-                        [(0.5, 0.5, 0, 1e-2, 'Invariant', 0.2, 0.05),
-                        (0.5, 0.5, 0.1, 0.1, 'Increasing', float("nan"), 0.05),
-                        (0.5, 0.5, -0.1, 0.1, 'Decreasing', float("nan"), 0.05)])
+                        [(0.5, 0.5, 0, 1e-2, Direction.Invariant, 0.2, 0.05),
+                        (0.5, 0.5, 0.1, 0.1, Direction.Increasing, float("nan"), 0.05),
+                        (0.5, 0.5, -0.1, 0.1, Direction.Decreasing, float("nan"), 0.05)])
 
 def test_metamorphic_compare_wilcoxon(loc_pop, scale_pop, loc_perturb, scale_perturb, direction, window_size, critical_quantile):
     population = np.random.normal(loc_pop, scale_pop, size=100)
@@ -125,9 +125,9 @@ def test_metamorphic_compare_wilcoxon(loc_pop, scale_pop, loc_perturb, scale_per
     result_dec, p_value_dec = paired_wilcoxon(population, population+perturbation, alternative="greater", critical_quantile=critical_quantile)
     result_inv, p_value_inv = equivalence_wilcoxon(population, population+perturbation, window_size=window_size, critical_quantile=critical_quantile)
 
-    dict_mapping = {'Invariant':  (result_inv, p_value_inv),
-                    'Decreasing': (result_dec, p_value_dec),
-                    'Increasing': (result_inc, p_value_inc)}
+    dict_mapping = {Direction.Invariant:  (result_inv, p_value_inv),
+                    Direction.Decreasing: (result_dec, p_value_dec),
+                    Direction.Increasing: (result_inc, p_value_inc)}
 
-    print(f'Direction: {direction} and p_value; {dict_mapping[direction][1]}')
+    print(f'Direction: {direction.name} and p_value; {dict_mapping[direction][1]}')
     assert dict_mapping[direction][1] < critical_quantile
