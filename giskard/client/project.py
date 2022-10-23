@@ -5,6 +5,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Union
 import numpy as np
 import pandas as pd
 import requests
+import cloudpickle
 from pandas.api.types import is_string_dtype
 from requests_toolbelt.sessions import BaseUrlSession
 
@@ -146,6 +147,7 @@ class GiskardProject:
             target,
             validate_df,
     ):
+        prediction_function = self._validate_model_is_pickleable(prediction_function)
         transformed_pred_func = self.transform_prediction_function(
             prediction_function, feature_names
         )
@@ -557,6 +559,18 @@ class GiskardProject:
         """
         new_prediction = prediction_function(sample_df)
         assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
+
+    @staticmethod
+    def _validate_model_is_pickleable(prediction_function):
+        """
+        Validates if the model can be pickled and un-pickled using cloud pickle
+        """
+        try:
+            pickled_model = cloudpickle.dumps(prediction_function)
+            unpickled_model = cloudpickle.loads(pickled_model)
+        except Exception:
+            raise ValueError("Unable to pickle or unpickle model on Giskard")
+        return unpickled_model
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
