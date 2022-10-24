@@ -1,5 +1,5 @@
 # `python-base` sets up all our shared environment variables
-FROM amd64/python:3.9-slim as python-base
+FROM python:3.9-slim as python-base
 
     # python
 ENV PYTHONUNBUFFERED=1 \
@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
     \
     # poetry
     # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.2.1 \
+    POETRY_VERSION=1.2.2 \
     # make poetry install to this location
     POETRY_HOME="/opt/poetry" \
     # make poetry create the virtual environment in the project's root
@@ -37,9 +37,10 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         git \
         curl \
-        build-essential
+        build-essential vim
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip && \
+    pip install -U pip setuptools
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python3 -
@@ -65,7 +66,7 @@ FROM builder-base as proto-builder
 
 WORKDIR $PYSETUP_PATH
 # install dev dependencies needed to protobuf code generation
-RUN poetry install --with main,dev
+RUN poetry install --only main,dev
 
 # copy makefile and proto to generate python sources
 COPY ./giskard ./giskard
