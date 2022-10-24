@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -45,16 +47,25 @@ def test_verify_is_pandasdataframe_pass(data):
     GiskardProject._validate_is_pandasdataframe(data)
 
 
-def _test_prediction_function(_data):
-    return np.random.rand(5, 1)
+def test_validate_deterministic_model():
+    def make_pred_func(multiplier=1.0):
+        def dummy_pred_func(data):
+            return data * multiplier
 
+        return dummy_pred_func
 
-@pytest.mark.parametrize('data,prev_prediction,prediction_function', [
-    (pd.DataFrame(data), _test_prediction_function, _test_prediction_function)
-])
-def test_validate_deterministic_model(data, prev_prediction, prediction_function):
-    with pytest.raises(AssertionError):
-        GiskardProject._validate_deterministic_model(data, prev_prediction, prediction_function)
+    data = pd.DataFrame(np.random.rand(5, 1))
+    pf_1 = make_pred_func(1)
+
+    with pytest.warns():
+        GiskardProject._validate_deterministic_model(data, pf_1(data), make_pred_func(0.5))
+
+    # Make sure there's no warning in other cases
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        GiskardProject._validate_deterministic_model(data, pf_1(data), pf_1)
+        GiskardProject._validate_deterministic_model(data, pf_1(data), make_pred_func(0.99999))
 
 
 def test_validate_columns_columntypes(german_credit_data, german_credit_test_data):

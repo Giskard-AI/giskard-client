@@ -556,7 +556,10 @@ class GiskardProject:
         Asserts if the model is deterministic by asserting previous and current prediction on same data
         """
         new_prediction = prediction_function(sample_df)
-        assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
+
+        if not np.allclose(prev_prediction, new_prediction):
+            warnings.warn("Model is stochastic and not deterministic. Prediction function returns different results"
+                          "after being invoked for the same data multiple times.")
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"
