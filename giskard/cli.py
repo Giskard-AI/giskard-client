@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-
+from urllib.parse import urlparse
 import click
 import lockfile
 import psutil
@@ -38,7 +38,7 @@ def worker() -> None:
 
 def start_stop_options(fn):
     fn = click.option(
-        "--host", "-h", type=STRING, default='localhost', help="Remote Giskard host address to connect to"
+        "--host", "-h", type=STRING, default='http://localhost:19000', help="Remote Giskard host address to connect to"
     )(fn)
 
     fn = click.option(
@@ -49,8 +49,11 @@ def start_stop_options(fn):
         "--port",
         "-p",
         type=INT,
-        default=40051,
         help="Remote Giskard port accepting external ML Worker connections",
+    )(fn)
+    fn = click.option(
+        "--silent", "is_silent", is_flag=True, default=False,
+        help="If true, this option will not ask you to update your git test repository"
     )(fn)
     fn = click.option(
         "--verbose",
@@ -75,7 +78,7 @@ def start_stop_options(fn):
     default=False,
     help="Should ML Worker be started as a Daemon in a background",
 )
-def start_command(host, port, is_server, is_daemon):
+def start_command(host, port, is_server, is_daemon, is_silent):
     """\b
     Start ML Worker.
 
@@ -86,17 +89,18 @@ def start_command(host, port, is_server, is_daemon):
     - client: ML Worker acts as a client and should connect to a running Giskard instance
         by specifying this instance's host and port.
     """
+    _start_command(is_server, is_silent, host, port, is_daemon)
 
-    _start_command(is_server, host, port, is_daemon)
 
-
-def _start_command(is_server, host, port, is_daemon):
+def _start_command(is_server, is_silent, host, port, is_daemon):
+    token = click.prompt("Please enter an API Access Token")
+    host_name = urlparse(host).hostname
     start_msg = "Starting ML Worker"
     start_msg += " server" if is_server else " client"
     if is_daemon:
         start_msg += " daemon"
     logger.info(start_msg)
-    pid_file_path = create_pid_file_path(is_server, host, port)
+    pid_file_path = create_pid_file_path(is_server, host_name, port)
     pid_file = PIDLockFile(pid_file_path)
     remove_stale_pid_file(pid_file)
     try:
@@ -104,10 +108,10 @@ def _start_command(is_server, host, port, is_daemon):
         if is_daemon:
             # Releasing the lock because it will be re-acquired by a daemon process
             pid_file.release()
-            run_daemon(is_server, host, port)
+            run_daemon(is_server, host_name, port)
         else:
             loop = asyncio.new_event_loop()
-            loop.create_task(start_ml_worker(is_server, host, port))
+            loop.create_task(start_ml_worker(is_server, is_silent, host, port, token))
             loop.run_forever()
     except KeyboardInterrupt:
         logger.info("Exiting")
@@ -133,6 +137,7 @@ def _ml_worker_description(is_server, host, port):
     "--all", "-a", "stop_all", is_flag=True, default=False, help="Stop all running ML Workers"
 )
 def stop_command(is_server, host, port, stop_all):
+    host = urlparse(host).hostname
     import re
 
     if stop_all:
@@ -146,9 +151,9 @@ def stop_command(is_server, host, port, stop_all):
 
 @worker.command("restart", help="Restart ML Worker")
 @start_stop_options
-def restart_command(is_server, host, port):
+def restart_command(is_server, is_silent, host, port):
     _find_and_stop(is_server, host, port)
-    _start_command(is_server, host, port, is_daemon=True)
+    _start_command(is_server, is_silent, host, port, is_daemon=True)
 
 
 def _stop_pid_fname(pid_fname):
