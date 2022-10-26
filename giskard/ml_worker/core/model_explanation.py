@@ -50,6 +50,9 @@ def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
     return explanation_chart_data
 
 
+
+
+
 def background_example(df: pd.DataFrame, input_types: Dict[str, str]) -> pd.DataFrame:
     example = df.mode(dropna=False).head(1)  # si plusieurs modes, on prend le premier
     example.fillna("", inplace=True)

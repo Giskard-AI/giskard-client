@@ -3,6 +3,7 @@ import logging
 
 import grpc
 
+from giskard.ml_worker.testing.registry.registry import load_plugins
 from giskard.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ async def _start_grpc_server(is_server=False):
 
 
 async def start_ml_worker(is_server=False, remote_host=None, remote_port=None):
+    load_plugins()
     from giskard.ml_worker.bridge.ml_worker_bridge import MLWorkerBridge
 
     tasks = []
