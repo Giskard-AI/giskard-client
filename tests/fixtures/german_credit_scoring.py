@@ -43,12 +43,10 @@ input_types = {
 @pytest.fixture()
 def german_credit_data() -> GiskardDataset:
     logger.info("Reading german_credit_prepared.csv")
+    df = pd.read_csv(path("test_data/german_credit_prepared.csv"), keep_default_na=False, na_values=["_GSK_NA_"], )
     return GiskardDataset(
-        df=pd.read_csv(
-            path("test_data/german_credit_prepared.csv"),
-            keep_default_na=False,
-            na_values=["_GSK_NA_"],
-        ),
+        df=df,
+        column_types=df.dtypes.apply(lambda x: x.name).to_dict(),
         target="default",
         feature_types=input_types,
     )
@@ -88,9 +86,12 @@ def german_credit_catboost(german_credit_data) -> GiskardModel:
 
 @pytest.fixture()
 def german_credit_test_data(german_credit_data):
+    df = pd.DataFrame(german_credit_data.df).drop(columns=["default"])
+    column_types = german_credit_data.column_types
     return GiskardDataset(
-        df=pd.DataFrame(german_credit_data.df).drop(columns=["default"]),
+        df=df,
         feature_types=input_types,
+        column_types={c: column_types[c] for c in column_types if c != 'default'},
         target=None,
     )
 

@@ -10,7 +10,7 @@ from lockfile.pidlockfile import PIDLockFile, read_pid_from_pidfile, remove_exis
 
 from giskard.cli_utils import create_pid_file_path, remove_stale_pid_file, run_daemon
 from giskard.ml_worker.ml_worker import start_ml_worker
-from giskard.settings import run_dir
+from giskard.path_utils import run_dir
 
 run_dir.mkdir(parents=True, exist_ok=True)
 

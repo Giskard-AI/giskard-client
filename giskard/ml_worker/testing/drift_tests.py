@@ -193,7 +193,7 @@ class DriftTests(AbstractTestCollection):
         psi_contribution_percent: float = 0.2,
     ) -> SingleTestResult:
         """
-        Test if the PSI score between the actual and expected datasets is below the threshold for
+        Test if the PSI score between the actual and reference datasets is below the threshold for
         a given categorical feature
 
         Example : The test is passed when the  PSI score of gender between reference and actual sets is below 0.2
@@ -220,7 +220,7 @@ class DriftTests(AbstractTestCollection):
             reference_slices_size:
                 Length of rows with given categorical feature in reference slice
             metric:
-                The total psi score between the actual and expected datasets
+                The total psi score between the actual and reference datasets
             passed:
                 TRUE if total_psi <= threshold
         """
@@ -257,7 +257,7 @@ class DriftTests(AbstractTestCollection):
         chi_square_contribution_percent: float = 0.2,
     ) -> SingleTestResult:
         """
-        Test if the p-value of the chi square test between the actual and expected datasets is
+        Test if the p-value of the chi square test between the actual and reference datasets is
         above the threshold for a given categorical feature
 
         Example : The test is passed when the pvalue of the chi square test of the categorical variable between
@@ -321,11 +321,11 @@ class DriftTests(AbstractTestCollection):
         threshold=0.05,
     ) -> SingleTestResult:
         """
-        Test if the pvalue of the KS test between the actual and expected datasets is above
+        Test if the pvalue of the KS test between the actual and reference datasets is above
         the threshold for a given numerical feature
 
         Example : The test is passed when the pvalue of the KS test of the numerical variable
-        between the actual and expected datasets is higher than 0.05. It means that the KS test
+        between the actual and reference datasets is higher than 0.05. It means that the KS test
         cannot be rejected at 5% level and that we cannot assume drift for this variable.
 
         Args:
@@ -376,11 +376,11 @@ class DriftTests(AbstractTestCollection):
         threshold: float = 0.2,
     ) -> SingleTestResult:
         """
-        Test if the earth movers distance between the actual and expected datasets is
+        Test if the earth movers distance between the actual and reference datasets is
         below the threshold for a given numerical feature
 
         Example : The test is passed when the earth movers distance of the numerical
-         variable between the actual and expected datasets is lower than 0.1.
+         variable between the actual and reference datasets is lower than 0.1.
          It means that we cannot assume drift for this variable.
 
         Args:
@@ -546,7 +546,7 @@ class DriftTests(AbstractTestCollection):
         for the classification labels predictions for a given slice
 
         Example : The test is passed when the  Chi Square value of classification labels prediction
-        for females between reference and actual sets is below 0.2
+        for females between reference and actual sets is below 0.05
 
         Args:
             actual_slice(GiskardDataset):

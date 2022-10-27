@@ -9,7 +9,8 @@ from daemon.runner import is_pidfile_stale
 from lockfile.pidlockfile import PIDLockFile
 
 from giskard.ml_worker.ml_worker import start_ml_worker
-from giskard.settings import run_dir
+from giskard.path_utils import run_dir
+from giskard.settings import settings
 
 logger = logging.getLogger(__name__)
 
