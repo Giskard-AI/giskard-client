@@ -1,5 +1,6 @@
 import hashlib
 import os
+import uuid
 
 from mixpanel import Consumer, Mixpanel
 
@@ -7,7 +8,7 @@ from mixpanel import Consumer, Mixpanel
 def nofail(func):
     def inner_function(*args, **kwargs):
         try:
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
         except BaseException:  # NOSONAR
             pass
 
@@ -61,11 +62,15 @@ class GiskardAnalyticsCollector:
             )
 
     @nofail
-    def track(self, event_name, properties=None, meta=None):
-        if self.is_enabled:
+    def track(self, event_name, properties=None, meta=None, force=False):
+        if self.is_enabled or force:
             self.mp.track(
-                distinct_id=self.distinct_user_id,
+                distinct_id=self.distinct_user_id or self.machine_based_user_id(),
                 event_name=event_name,
                 properties=properties,
                 meta=meta,
             )
+
+    @staticmethod
+    def machine_based_user_id():
+        return anonymize(str(uuid.getnode()) + os.getlogin())

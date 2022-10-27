@@ -9,12 +9,14 @@ from click import INT, STRING
 from lockfile.pidlockfile import PIDLockFile, read_pid_from_pidfile, remove_existing_pidfile
 
 from giskard.cli_utils import create_pid_file_path, remove_stale_pid_file, run_daemon
+from giskard.client.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.ml_worker.ml_worker import start_ml_worker
 from giskard.path_utils import run_dir
 
 run_dir.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
+analytics = GiskardAnalyticsCollector()
 
 
 def set_verbose(_ctx, _param, value):
@@ -91,6 +93,12 @@ def start_command(host, port, is_server, is_daemon):
 
 
 def _start_command(is_server, host, port, is_daemon):
+    analytics.track("Start ML Worker", {
+        "is_server": is_server,
+        "host": anonymize(host),
+        "port": anonymize(port),
+        "is_daemon": is_daemon
+    }, force=True)
     start_msg = "Starting ML Worker"
     start_msg += " server" if is_server else " client"
     if is_daemon:
