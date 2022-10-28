@@ -36,18 +36,11 @@ jobs:
       - name: Make
         run: make
 
-      - name: Setup sonarqube
-        uses: warchant/setup-sonar-scanner@v3
-      - name: Run sonarqube
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: sonar-scanner
-
-      - name: Build
-        run: |
-          make build
-
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Build
+        run: |
+          make build
