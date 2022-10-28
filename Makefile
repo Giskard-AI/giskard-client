@@ -69,10 +69,13 @@ codestyle:
 .PHONY: formatting
 formatting: codestyle
 
-#* Linting
 .PHONY: test
 test:
 	poetry run pytest -c pyproject.toml --cov=giskard tests --cov-report=xml
+
+.PHONY: test-cov-html
+test-cov-html:
+	poetry run pytest -c pyproject.toml --cov=giskard tests --cov-report=html
 
 .PHONY: check-codestyle
 check-codestyle:
