@@ -161,3 +161,4 @@ cython_debug/
 .idea/
 catboost_info
 giskard/ml_worker/generated
+.scannerwork
