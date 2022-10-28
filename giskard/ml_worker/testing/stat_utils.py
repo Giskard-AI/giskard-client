@@ -12,7 +12,7 @@ def paired_t_test(population_1, population_2, alternative, critical_quantile):
     """
 
     if alternative not in ["less", "greater"]:
-        raise Exception("Incorrect alternative hypothesis! The alsernative has to be one of the following: ['less', 'greater']")
+        raise Exception("Incorrect alternative hypothesis! It has to be one of the following: ['less', 'greater']")
 
     stat, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
 
@@ -63,7 +63,7 @@ def paired_wilcoxon(population_1, population_2, alternative, critical_quantile):
 
     if alternative not in ["less", "greater"]:
         raise Exception(
-            "Incorrect alternative hypothesis! The alternative has to be one of the following: ['less', 'greater']")
+            "Incorrect alternative hypothesis! It has to be one of the following: ['less', 'greater']")
 
     stat, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
 
