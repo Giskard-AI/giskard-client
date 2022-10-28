@@ -5,6 +5,8 @@ from asyncio import StreamReader, StreamWriter
 
 from tenacity import retry, wait_exponential
 
+from giskard.cli import analytics
+from giskard.client.analytics_collector import anonymize
 from giskard.ml_worker.bridge.error import ConnectionLost
 from giskard.ml_worker.bridge.service_messages import CREATE_CLIENT_CHANNEL, START_INNER_SERVER
 from giskard.ml_worker.utils.network import readable_hex
@@ -50,6 +52,11 @@ class MLWorkerBridge:
             if self.service_channel_reader:
                 readers.remove(self.service_channel_reader)
             logger.error(f"Failed to connect to a remote host: {self.remote_host}:{self.remote_port} : {str(e)}")
+            analytics.track("Start ML Worker Bridge error", {
+                "host": anonymize(self.remote_host),
+                "port": anonymize(self.remote_port),
+                "error": str(e)
+            }, force=True)
             raise e
 
     async def connect_to_remote_host(self):

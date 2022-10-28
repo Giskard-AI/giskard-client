@@ -5,6 +5,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Union
 import numpy as np
 import pandas as pd
 import requests
+import cloudpickle
 from pandas.api.types import is_string_dtype
 from requests_toolbelt.sessions import BaseUrlSession
 
@@ -146,6 +147,7 @@ class GiskardProject:
             target,
             validate_df,
     ):
+        prediction_function = self._validate_model_is_pickleable(prediction_function)
         transformed_pred_func = self.transform_prediction_function(
             prediction_function, feature_names
         )
@@ -249,7 +251,7 @@ class GiskardProject:
         self._validate_is_pandasdataframe(df)
         if target is not None:
             self._validate_target(target, df.keys())
-        self.validate_columns_columntypes(df, column_types)
+        self.validate_columns_columntypes(df, column_types, target)
         self._validate_column_types(column_types)
         self._validate_category_columns(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
@@ -499,7 +501,7 @@ class GiskardProject:
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
             warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
                           "The output of Multiclass and Binary classifications should be within the range [0,1]"
-            )
+                          )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
             warnings.warn("Sum of output values of prediction_function is not equal to 1."
                           " For Multiclass and Binary classifications, the sum of probabilities should be 1")
@@ -509,7 +511,7 @@ class GiskardProject:
             )
 
     @staticmethod
-    def validate_columns_columntypes(df: pd.DataFrame, column_types) -> pd.DataFrame:
+    def validate_columns_columntypes(df: pd.DataFrame, column_types, target) -> pd.DataFrame:
         if not set(column_types.keys()).issubset(set(df.columns)):
             missing_columns = set(column_types.keys()) - set(df.columns)
             raise ValueError(
@@ -517,21 +519,24 @@ class GiskardProject:
             )
         elif not set(df.columns).issubset(set(column_types.keys())):
             missing_columns = set(df.columns) - set(column_types.keys())
-            raise ValueError(
-                f"Invalid column_types parameter: Please declare the type for "
-                f"{missing_columns} columns"
-            )
-        else:
-            pandas_inferred_column_types = df.dtypes.to_dict()
-            for column, dtype in pandas_inferred_column_types.items():
-                if (
-                        column_types.get(column) == SupportedColumnType.NUMERIC.value
-                        and dtype == "object"
-                ):
-                    try:
-                        df[column] = df[column].astype(float)
-                    except Exception as e:
-                        raise ValueError(f"Failed to convert column '{column}' to float") from e
+            if target in missing_columns:
+                missing_columns.remove(target)
+            if missing_columns:
+                raise ValueError(
+                    f"Invalid column_types parameter: Please declare the type for "
+                    f"{missing_columns} columns"
+                )
+
+        pandas_inferred_column_types = df.dtypes.to_dict()
+        for column, dtype in pandas_inferred_column_types.items():
+            if (
+                    column_types.get(column) == SupportedColumnType.NUMERIC.value
+                    and dtype == "object"
+            ):
+                try:
+                    df[column] = df[column].astype(float)
+                except Exception as e:
+                    raise ValueError(f"Failed to convert column '{column}' to float") from e
             return df
 
     @staticmethod
@@ -553,7 +558,22 @@ class GiskardProject:
         Asserts if the model is deterministic by asserting previous and current prediction on same data
         """
         new_prediction = prediction_function(sample_df)
-        assert np.array_equal(prev_prediction, new_prediction), "Model is stochastic and not deterministic"
+
+        if not np.allclose(prev_prediction, new_prediction):
+            warnings.warn("Model is stochastic and not deterministic. Prediction function returns different results"
+                          "after being invoked for the same data multiple times.")
+
+    @staticmethod
+    def _validate_model_is_pickleable(prediction_function):
+        """
+        Validates if the model can be pickled and un-pickled using cloud pickle
+        """
+        try:
+            pickled_model = cloudpickle.dumps(prediction_function)
+            unpickled_model = cloudpickle.loads(pickled_model)
+        except Exception:
+            raise ValueError("Unable to pickle or unpickle model on Giskard")
+        return unpickled_model
 
     def __repr__(self) -> str:
         return f"GiskardProject(project_key='{self.project_key}')"

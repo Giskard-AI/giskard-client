@@ -11,22 +11,25 @@ from giskard.ml_worker.core.model import GiskardModel
 
 
 def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
+    def prepare_df(df):
+        return model.prepare_dataframe(
+            GiskardDataset(
+                df=df,
+                target=dataset.target,
+                feature_types=dataset.feature_types,
+                column_types=dataset.column_types,
+            )
+        )
+
     df = model.prepare_dataframe(dataset)
     feature_names = list(df.columns)
 
     # Make sure column order is that column order is the same as in df
     input_data_df = pd.DataFrame([input_data])[df.columns]
-    input_df = model.prepare_dataframe(
-        GiskardDataset(
-            df=input_data_df,
-            target=dataset.target,
-            feature_types=dataset.feature_types,
-            column_types=dataset.column_types,
-        )
-    )
+    input_df = prepare_df(input_data_df)
 
     def predict_array(array):
-        return model.prediction_function(pd.DataFrame(array, columns=list(df.columns)))
+        return model.prediction_function(prepare_df(pd.DataFrame(array, columns=list(df.columns))))
 
     example = background_example(df, dataset.feature_types)
     kernel = shap.KernelExplainer(predict_array, example)
@@ -48,7 +51,7 @@ def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
 
 
 def background_example(df: pd.DataFrame, input_types: Dict[str, str]) -> pd.DataFrame:
-    example = df.mode(dropna=False).iloc[[0]]  # si plusieurs modes, on prend le premier
+    example = df.mode(dropna=False).head(1)  # si plusieurs modes, on prend le premier
     example.fillna("", inplace=True)
     median = df.median()
     num_columns = [key for key in list(df.columns) if input_types.get(key) == "numeric"]
