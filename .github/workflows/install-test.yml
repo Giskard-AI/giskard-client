@@ -43,6 +43,6 @@ jobs:
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         with:
-          projectBaseDir: ${{env.GITHUB_WORKSPACE}}
+          projectBaseDir: /home/runner/work/giskard-client/giskard-client
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
