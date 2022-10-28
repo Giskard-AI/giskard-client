@@ -36,6 +36,9 @@ jobs:
       - name: Make
         run: make
 
+      - name: Replace local coverage.xml path by docker path for Sonar
+        run: sed -i 's/\/home\/runner\/work\/giskard-client\/giskard-client\//\/github\/workspace\//g' coverage.xml
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
