@@ -596,7 +596,7 @@ class MetamorphicTests(AbstractTestCollection):
                                           model=model,
                                           perturbation_dict=perturbation_dict,
                                           classification_label=classification_label,
-                                          window_size=None,
+                                          window_size=float("nan"),
                                           critical_quantile=critical_quantile)
 
     def test_metamorphic_increasing_wilcoxon(self,
