@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 from asyncio import StreamReader, StreamWriter
+from random import random
 
 from tenacity import retry, wait_exponential
 
@@ -46,11 +47,7 @@ class MLWorkerBridge:
             await self.send_service_message(START_INNER_SERVER)
             self.loop.create_task(self.listen_remote_server_service_socket())
         except Exception as e:
-            if self.service_channel_writer:
-                self.service_channel_writer.close()
-                await self.service_channel_writer.wait_closed()
-            if self.service_channel_reader:
-                readers.remove(self.service_channel_reader)
+            await self.close_service_channel()
             logger.error(f"Failed to connect to a remote host: {self.remote_host}:{self.remote_port} : {str(e)}")
             analytics.track("Start ML Worker Bridge error", {
                 "host": anonymize(self.remote_host),
@@ -58,6 +55,13 @@ class MLWorkerBridge:
                 "error": str(e)
             }, force=True)
             raise e
+
+    async def close_service_channel(self):
+        if self.service_channel_writer:
+            self.service_channel_writer.close()
+            await self.service_channel_writer.wait_closed()
+        if self.service_channel_reader:
+            readers.remove(self.service_channel_reader)
 
     async def connect_to_remote_host(self):
         logger.info(f"Connecting to {self.remote_host}:{self.remote_port}")
@@ -82,19 +86,23 @@ class MLWorkerBridge:
 
     async def listen_remote_server_service_socket(self):
         try:
-            logger.debug("Created remote server listener task")
-            while True:
-                logger.debug("waiting for a service command")
-                data = await self.service_channel_reader.read(9)  # command payload is 1 byte by design
-                if len(data):
-                    client = data[:8]
-                    command = int.from_bytes(data[8:], "big")
-                    logger.debug(f"service command received: {client}: {command}")
-                    await self.handle_server_command(client, command)
-                else:
-                    raise ConnectionLost()
-        except ConnectionLost:
-            logger.info("Connection to Giskard host lost")
+            try:
+                logger.debug("Created remote server listener task")
+                while True:
+                    logger.debug("waiting for a service command")
+                    data = await self.service_channel_reader.read(9)  # command payload is 1 byte by design
+                    if len(data):
+                        client = data[:8]
+                        command = int.from_bytes(data[8:], "big")
+                        logger.debug(f"service command received: {client}: {command}")
+                        await self.handle_server_command(client, command)
+                    else:
+                        raise ConnectionLost()
+            finally:
+                await self.close_service_channel()
+        except (ConnectionLost, ConnectionResetError):
+            logger.info("Lost connection to Giskard server, retrying...")
+            await asyncio.sleep(1 + random() * 2)
             await self.start()
         except BaseException as e:  # NOSONAR
             logger.exception(e)

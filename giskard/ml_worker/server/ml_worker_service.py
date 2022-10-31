@@ -1,4 +1,3 @@
-import collections.abc
 import logging
 import os
 import platform
@@ -11,17 +10,15 @@ import pandas as pd
 import pkg_resources
 import psutil
 import tqdm
-from eli5.lime import TextExplainer
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model_explanation import (
     explain,
     parse_text_explainer_response,
-    text_explanation_prediction_wrapper,
+    explain_text,
 )
 from giskard.ml_worker.exceptions.IllegalArgumentError import IllegalArgumentError
 from giskard.ml_worker.exceptions.giskard_exception import GiskardException
-from giskard.ml_worker.generated import ml_worker_pb2
 from giskard.ml_worker.generated.ml_worker_pb2 import (
     DataFrame,
     DataRow,
@@ -179,14 +176,8 @@ class MLWorkerServiceImpl(MLWorkerServicer):
         input_df = pd.DataFrame({k: [v] for k, v in request.columns.items()})
         if model.feature_names:
             input_df = input_df[model.feature_names]
-        text_explainer = TextExplainer(random_state=42, n_samples=n_samples)
-        prediction_function = text_explanation_prediction_wrapper(
-            model.prediction_function, input_df, text_column
-        )
-        text_explainer.fit(text_document, prediction_function)
-        html_response = text_explainer.show_prediction(
-            target_names=model.classification_labels
-        )._repr_html_()
+
+        html_response = explain_text(model, input_df, text_column, text_document, n_samples)._repr_html_()
         return ExplainTextResponse(explanations=parse_text_explainer_response(html_response))
 
     def runModelForDataFrame(self, request: RunModelForDataFrameRequest, context):

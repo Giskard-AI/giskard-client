@@ -21,6 +21,18 @@ class GiskardError(Exception):
         self.code = code
 
 
+def explain_error(err_resp):
+    status = err_resp.get("status")
+    code = err_resp.get("message")
+    message = None
+    if status == 401:
+        message = "Access token is invalid or expired. Please generate a new one"
+
+    if message is None:
+        message = f"{err_resp.get('title', 'Unknown error')}: {err_resp.get('detail', 'no details')}"
+    return GiskardError(status=status, code=code, message=message)
+
+
 class ErrorHandlingAdapter(HTTPAdapter):
     def build_response(self, req, resp):
         response = super().build_response(req, resp)
@@ -29,11 +41,8 @@ class ErrorHandlingAdapter(HTTPAdapter):
             giskard_error = None
             try:
                 err_resp = response.json()
-                giskard_error = GiskardError(
-                    status=err_resp.get("status"),
-                    code=err_resp.get("message"),
-                    message=f"{err_resp.get('title', 'Unknown error')}: {err_resp.get('detail', 'no details')}",
-                )
+
+                giskard_error = explain_error(err_resp)
             except:  # NOSONAR
                 response.raise_for_status()
             raise giskard_error
@@ -49,7 +58,8 @@ class GiskardClient:
         self.analytics = GiskardAnalyticsCollector()
         try:
             server_settings = self._session.get("settings").json()
-            self.analytics.init(server_settings)
+            self.analytics.\
+                init(server_settings)
         except Exception:
             logger.warning(f"Failed to fetch server settings", exc_info=True)
         self.analytics.track("Init GiskardClient", {"client version": giskard.__version__})

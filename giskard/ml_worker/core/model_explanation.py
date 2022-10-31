@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Callable, Dict, List, Any
 
@@ -5,11 +6,16 @@ import numpy as np
 import pandas as pd
 import shap
 from bs4 import BeautifulSoup
+from eli5.lime import TextExplainer
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model import GiskardModel
+from giskard.ml_worker.utils.logging import timer
+
+logger = logging.getLogger(__name__)
 
 
+@timer()
 def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
     def prepare_df(df):
         return model.prepare_dataframe(
@@ -48,6 +54,21 @@ def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
     else:
         raise ValueError(f"Prediction task is not supported: {model.model_type}")
     return explanation_chart_data
+
+
+@timer()
+def explain_text(model: GiskardModel, input_df: pd.DataFrame,
+                 text_column: str, text_document: str, n_samples: int):
+    text_explainer = TextExplainer(random_state=42, n_samples=n_samples)
+    prediction_function = text_explanation_prediction_wrapper(
+        model.prediction_function, input_df, text_column
+    )
+    try:
+        text_explainer.fit(text_document, prediction_function)
+        return text_explainer.show_prediction(target_names=model.classification_labels)
+    except Exception as e:
+        logger.exception(f"Failed to explain text: {text_document}", e)
+        raise Exception("Failed to create text explanation") from e
 
 
 def background_example(df: pd.DataFrame, input_types: Dict[str, str]) -> pd.DataFrame:
