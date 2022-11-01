@@ -21,7 +21,7 @@ async def _start_grpc_server(is_server=False):
         ]
     )
 
-    port = settings.port or find_free_port()
+    port = settings.port if settings.port and is_server else find_free_port()
     add_MLWorkerServicer_to_server(MLWorkerServiceImpl(port, not is_server), server)
     server.add_insecure_port(f"{settings.host}:{port}")
     await server.start()
