@@ -90,9 +90,44 @@ class GiskardProject:
             target,
             validate_df,
         )
-        self._post_model(
+        return self._post_model(
             classification_labels, classification_threshold, feature_names, model, model_type, name
         )
+
+    def update_test_suite_params(self, actual_ds_id, reference_ds_id, model_id, test_id=None, test_suite_id=None):
+        assert test_id is not None or test_suite_id is not None, "Either test_id or test_suite_id should be specified"
+        res = self._session.put("testing/suites/update_params", json={
+            "testSuiteId": test_suite_id,
+            "testId": test_id,
+            "referenceDatasetId": reference_ds_id,
+            "actualDatasetId": actual_ds_id,
+            "modelId": model_id
+        })
+        assert res.status_code == 200, "Failed to update test suite"
+
+    def list_tests_in_suite(self, suite_id):
+        assert suite_id is not None, "suite_id should be specified"
+        res = self._session.get("testing/tests", params={"suiteId": suite_id}).json()
+        return [{"id": t["id"], "name": t["name"]} for t in res]
+
+    def list_test_suites(self, project_id):
+        assert project_id is not None, "project_id should be specified"
+        res = self._session.get(f"testing/suites/{project_id}").json()
+        return [{"id": t["id"], "name": t["name"]} for t in res]
+
+    def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
+        assert test_id is not None, "test_id should be specified"
+        self.update_test_suite_params(
+            actual_ds_id, reference_ds_id, model_id, test_id=test_id
+        )
+        return self._session.post(f"testing/tests/{test_id}/run").json()
+
+    def execute_test_suite(self, test_suite_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
+        assert test_suite_id is not None, "test_suite_id should be specified"
+        self.update_test_suite_params(
+            actual_ds_id, reference_ds_id, model_id, test_suite_id=test_suite_id,
+        )
+        return self._session.post(f"testing/suites/execute", json={"suiteId": test_suite_id}).json()
 
     def _post_model(
             self,
@@ -119,7 +154,7 @@ class GiskardProject:
             ("modelFile", model),
             ("requirementsFile", requirements),
         ]
-        self._session.post("project/models/upload", data={}, files=files)
+        model_res = self._session.post("project/models/upload", data={}, files=files)
         self.analytics.track(
             "Upload Model",
             {
@@ -136,6 +171,7 @@ class GiskardProject:
         print(
             f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} "
         )
+        return model_res.json().get('id')
 
     def _validate_model(
             self,
@@ -245,7 +281,7 @@ class GiskardProject:
                 "target": anonymize(target),
             },
         )
-        return result
+        return result.json().get('id')
 
     def _validate_and_compress_data(self, column_types, df, target):
         self._validate_is_pandasdataframe(df)
@@ -270,7 +306,7 @@ class GiskardProject:
             dataset_name: str = None,
             classification_threshold: Optional[float] = None,
             classification_labels: Optional[List[str]] = None,
-    ) -> None:
+    ):
         """
         Function to upload Dataset and model to Giskard
         Args:
@@ -322,8 +358,8 @@ class GiskardProject:
             target,
             df,
         )
-        self._post_data(column_types, data, dataset_name, raw_column_types, target)
-        self._post_model(
+        data_res = self._post_data(column_types, data, dataset_name, raw_column_types, target)
+        model_res = self._post_model(
             classification_labels,
             classification_threshold,
             feature_names,
@@ -331,6 +367,7 @@ class GiskardProject:
             model_type,
             model_name,
         )
+        return model_res, data_res
 
     @staticmethod
     def _validate_model_type(model_type):
