@@ -17,12 +17,14 @@ from giskard.client.python_utils import get_python_requirements, get_python_vers
 
 class GiskardProject:
     def __init__(
-            self, session: BaseUrlSession, project_key: str, analytics: GiskardAnalyticsCollector = None
+            self, session: BaseUrlSession, project_key: str, project_id: int,
+            analytics: GiskardAnalyticsCollector = None
     ) -> None:
         self.project_key = project_key
         self._session = session
         self.url = self._session.base_url.replace("/api/v2/", "")
         self.analytics = analytics or GiskardAnalyticsCollector()
+        self.project_id = project_id
 
     @staticmethod
     def _serialize(
@@ -110,9 +112,8 @@ class GiskardProject:
         res = self._session.get("testing/tests", params={"suiteId": suite_id}).json()
         return [{"id": t["id"], "name": t["name"]} for t in res]
 
-    def list_test_suites(self, project_id):
-        assert project_id is not None, "project_id should be specified"
-        res = self._session.get(f"testing/suites/{project_id}").json()
+    def list_test_suites(self):
+        res = self._session.get(f"testing/suites/{self.project_id}").json()
         return [{"id": t["id"], "name": t["name"]} for t in res]
 
     def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):

@@ -26,7 +26,7 @@ def test_upload_df(diabetes_dataset: GiskardDataset):
     httpretty.register_uri(httpretty.POST, "http://giskard-host:12345/api/v2/project/data/upload")
     dataset_name = "diabetes dataset"
     client = GiskardClient(url, token)
-    project = GiskardProject(client.session, "test-project")
+    project = GiskardProject(client.session, "test-project", 1)
 
     with pytest.raises(Exception):  # Error Scenario
         project.upload_df(
@@ -61,7 +61,7 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
     httpretty.register_uri(httpretty.POST, "http://giskard-host:12345/api/v2/project/models/upload")
 
     client = GiskardClient(url, token)
-    project = GiskardProject(client.session, "test-project")
+    project = GiskardProject(client.session, "test-project", 1)
     if model.model_type == "regression":
         # Warning Scenario: classification_labels is sent for regression model
         with pytest.warns(UserWarning):
@@ -105,7 +105,7 @@ def _test_upload_model(model: GiskardModel, ds: GiskardDataset):
 
 def _test_upload_model_exceptions(model: GiskardModel, ds: GiskardDataset):
     client = GiskardClient(url, token)
-    project = GiskardProject(client.session, "test-project")
+    project = GiskardProject(client.session, "test-project", 1)
 
     # Error Scenario : Column_types dictionary sent as feature_names
     with pytest.raises(Exception):
