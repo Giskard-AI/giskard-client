@@ -94,7 +94,7 @@ class GiskardProject:
             classification_labels, classification_threshold, feature_names, model, model_type, name
         )
 
-    def update_test_suite_params(self, actual_ds_id, reference_ds_id, model_id, test_id=None, test_suite_id=None):
+    def _update_test_suite_params(self, actual_ds_id, reference_ds_id, model_id, test_id=None, test_suite_id=None):
         assert test_id is not None or test_suite_id is not None, "Either test_id or test_suite_id should be specified"
         res = self._session.put("testing/suites/update_params", json={
             "testSuiteId": test_suite_id,
@@ -117,14 +117,14 @@ class GiskardProject:
 
     def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
         assert test_id is not None, "test_id should be specified"
-        self.update_test_suite_params(
+        self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_id=test_id
         )
         return self._session.post(f"testing/tests/{test_id}/run").json()
 
     def execute_test_suite(self, test_suite_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
         assert test_suite_id is not None, "test_suite_id should be specified"
-        self.update_test_suite_params(
+        self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_suite_id=test_suite_id,
         )
         return self._session.post(f"testing/suites/execute", json={"suiteId": test_suite_id}).json()
