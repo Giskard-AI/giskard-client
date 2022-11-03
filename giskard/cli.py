@@ -42,7 +42,7 @@ def start_stop_options(fn):
     )(fn)
 
     fn = click.option(
-        "--server", "-s", "is_server", is_flag=True, default=False,
+        "--server", "-s", "server_instance", type=STRING,
         help="Server mode. Used by Giskard embedded ML Worker"
     )(fn)
     fn = click.option(
@@ -78,7 +78,10 @@ def start_stop_options(fn):
     default=False,
     help="Should ML Worker be started as a Daemon in a background",
 )
-def start_command(host, port, is_server, is_daemon, is_silent):
+@click.option(
+    '--token', prompt="Please enter an API Access Token"
+)
+def start_command(token, host, port, server_instance, is_daemon, is_silent):
     """\b
     Start ML Worker.
 
@@ -89,18 +92,17 @@ def start_command(host, port, is_server, is_daemon, is_silent):
     - client: ML Worker acts as a client and should connect to a running Giskard instance
         by specifying this instance's host and port.
     """
-    _start_command(is_server, is_silent, host, port, is_daemon)
+    _start_command(token, server_instance, is_silent, host, port, is_daemon)
 
 
-def _start_command(is_server, is_silent, host, port, is_daemon):
-    token = click.prompt("Please enter an API Access Token")
+def _start_command(token, server_instance, is_silent, host, port, is_daemon):
     host_name = urlparse(host).hostname
     start_msg = "Starting ML Worker"
-    start_msg += " server" if is_server else " client"
+    start_msg += " server" if server_instance is not None else " client"
     if is_daemon:
         start_msg += " daemon"
     logger.info(start_msg)
-    pid_file_path = create_pid_file_path(is_server, host_name, port)
+    pid_file_path = create_pid_file_path(server_instance, host_name, port)
     pid_file = PIDLockFile(pid_file_path)
     remove_stale_pid_file(pid_file)
     try:
@@ -108,17 +110,17 @@ def _start_command(is_server, is_silent, host, port, is_daemon):
         if is_daemon:
             # Releasing the lock because it will be re-acquired by a daemon process
             pid_file.release()
-            run_daemon(is_server, host_name, port)
+            run_daemon(server_instance, host_name, port)
         else:
             loop = asyncio.new_event_loop()
-            loop.create_task(start_ml_worker(is_server, is_silent, host, port, token))
+            loop.create_task(start_ml_worker(server_instance, is_silent, host, port, token))
             loop.run_forever()
     except KeyboardInterrupt:
         logger.info("Exiting")
     except lockfile.AlreadyLocked:
         existing_pid = read_pid_from_pidfile(pid_file_path)
         logger.warning(
-            f"Another ML Worker {_ml_worker_description(is_server, host, port)} "
+            f"Another ML Worker {_ml_worker_description(server_instance, host, port)} "
             f"is already running with PID: {existing_pid}. "
             f"Not starting a new one."
         )
@@ -127,8 +129,8 @@ def _start_command(is_server, is_silent, host, port, is_daemon):
             pid_file.release()
 
 
-def _ml_worker_description(is_server, host, port):
-    return "server" if is_server else f"client for {host or 'localhost'}:{port or ''}"
+def _ml_worker_description(server_instance, host, port):
+    return "server" if server_instance is not None else f"client for {host or 'localhost'}:{port or ''}"
 
 
 @worker.command("stop", help="Stop running ML Workers")
@@ -136,7 +138,7 @@ def _ml_worker_description(is_server, host, port):
 @click.option(
     "--all", "-a", "stop_all", is_flag=True, default=False, help="Stop all running ML Workers"
 )
-def stop_command(is_server, host, port, stop_all):
+def stop_command(server_instance, host, port, stop_all):
     host = urlparse(host).hostname
     import re
 
@@ -146,14 +148,14 @@ def stop_command(is_server, host, port, stop_all):
                 continue
             _stop_pid_fname(pid_fname)
     else:
-        _find_and_stop(is_server, host, port)
+        _find_and_stop(server_instance, host, port)
 
 
 @worker.command("restart", help="Restart ML Worker")
 @start_stop_options
-def restart_command(is_server, is_silent, host, port):
-    _find_and_stop(is_server, host, port)
-    _start_command(is_server, is_silent, host, port, is_daemon=True)
+def restart_command(server_instance, is_silent, host, port):
+    _find_and_stop(server_instance, host, port)
+    _start_command(server_instance, is_silent, host, port, is_daemon=True)
 
 
 def _stop_pid_fname(pid_fname):
@@ -167,17 +169,17 @@ def _stop_pid_fname(pid_fname):
     remove_existing_pidfile(pid_file_path)
 
 
-def _find_and_stop(is_server, host, port):
-    pid_file_path = str(create_pid_file_path(is_server, host, port))
+def _find_and_stop(server_instance, host, port):
+    pid_file_path = str(create_pid_file_path(server_instance, host, port))
     remove_stale_pid_file(PIDLockFile(pid_file_path))
     pid = read_pid_from_pidfile(pid_file_path)
     logger.info("Stopping ML Worker Daemon")
     if pid:
         worker_process = psutil.Process(pid)
         worker_process.terminate()
-        logger.info(f"Stopped ML Worker {_ml_worker_description(is_server, host, port)}")
+        logger.info(f"Stopped ML Worker {_ml_worker_description(server_instance, host, port)}")
     else:
-        logger.info(f"ML Worker {_ml_worker_description(is_server, host, port)} is not running")
+        logger.info(f"ML Worker {_ml_worker_description(server_instance, host, port)} is not running")
     remove_existing_pidfile(pid_file_path)
 
 
