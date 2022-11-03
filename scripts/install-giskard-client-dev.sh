@@ -1,4 +1,4 @@
-pip="${1:-pip}"
+pip="${0:-pip}"
 rm -f /tmp/giskard*whl* || true
 wget https://nightly.link/Giskard-AI/giskard-client/workflows/install-test/main/giskard-dev-3.7.whl.zip
 unzip -o giskard-dev-3.7.whl.zip -d /tmp
