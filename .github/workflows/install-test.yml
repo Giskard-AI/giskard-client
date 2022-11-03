@@ -49,7 +49,7 @@ jobs:
         with:
           file: "pyproject.toml"
           key: "tool.poetry.version"
-          value: $(echo 0.dev${GITHUB_RUN_ID})
+          value: echo "0.dev$GITHUB_RUN_ID"
 
       - name: Build dev version
         run: |
