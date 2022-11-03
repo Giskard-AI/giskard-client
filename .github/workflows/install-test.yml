@@ -47,3 +47,9 @@ jobs:
       - name: Build
         run: |
           make build
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
+
