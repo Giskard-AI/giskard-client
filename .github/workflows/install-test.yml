@@ -44,12 +44,24 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Extract current package version
+        uses: SebRollen/toml-action@v1.0.1
+        id: read_toml
+        with:
+          file: 'pyproject.toml'
+          field: 'tool.poetry.version'
+
+      - name: Get current date
+        id: current_date
+        run: echo "CURRENT_DATE=$(date '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+
       - name: Set dev version
         uses: ciiiii/toml-editor@1.0.0
         with:
           file: "pyproject.toml"
           key: "tool.poetry.version"
-          value: '0.dev${{ env.GITHUB_RUN_ID }}'
+          value: '${{ steps.read_toml.outputs.value }}.dev${{ steps.current_date.outputs.CURRENT_DATE }}'
 
       - name: Build dev version
         run: |
