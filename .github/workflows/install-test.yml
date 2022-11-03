@@ -48,8 +48,9 @@ jobs:
         run: |
           make build
 
-      - uses: actions/download-artifact@v3
+      - name: Archive built artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: dist
-          path: dist
+          name: giskard-dev-${{ matrix.python-version }}.whl
+          path: dist/*whl
 
