@@ -550,6 +550,7 @@ class GiskardProject:
 
     @staticmethod
     def validate_columns_columntypes(df: pd.DataFrame, column_types, target) -> pd.DataFrame:
+
         if not set(column_types.keys()).issubset(set(df.columns)):
             missing_columns = set(column_types.keys()) - set(df.columns)
             raise ValueError(
@@ -563,6 +564,20 @@ class GiskardProject:
                 raise ValueError(
                     f"Invalid column_types parameter: Please declare the type for "
                     f"{missing_columns} columns"
+                )
+
+        nuniques=df.nunique()
+        nuniques_max=20
+        for column in df.columns:
+            if nuniques[column] <= nuniques_max and column_types[column] == 'numeric':
+                warnings.warn(
+                    f"Feature '{column}' is declared as 'numeric' but has {nuniques[column]} (<= nuniques_max={nuniques_max}) distinct values. Are "
+                    f"you sure it is not a 'category' feature?"
+                )
+            elif nuniques[column] > nuniques_max and column_types[column] == 'categorical':
+                warnings.warn(
+                    f"Feature '{column}' is declared as 'categorical' but has {nuniques[column]} (> nuniques_max={nuniques_max}) distinct values. Are "
+                    f"you sure it is not a 'numeric' feature?"
                 )
 
         pandas_inferred_column_types = df.dtypes.to_dict()
