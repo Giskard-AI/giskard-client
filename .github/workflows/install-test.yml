@@ -60,6 +60,8 @@ jobs:
       - name: Get current date
         if: ${{ steps.extract_branch.outputs.branch == 'main' }}
         id: current_date
+        env:
+          TZ: Europe/Paris
         run: echo "CURRENT_DATE=$(date '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
 
