@@ -102,7 +102,7 @@ lint: test check-codestyle mypy check-safety
 .PHONY: docker-build
 docker-build:
 	@echo Building docker $(IMAGE):$(VERSION) ...
-	docker build \
+	docker build --platform linux/amd64 \
 		-t $(IMAGE):$(VERSION) . \
 		-f ./docker/Dockerfile
 

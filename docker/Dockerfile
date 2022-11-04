@@ -1,5 +1,5 @@
 # `python-base` sets up all our shared environment variables
-FROM python:3.9-slim as python-base
+FROM python:3.7.13 as python-base
 
     # python
 ENV PYTHONUNBUFFERED=1 \
@@ -56,9 +56,15 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 
 
 
+# the libraries below are required for demo projects
+RUN pip install  \
+    catboost==1.0.6  \
+    torch==1.12.0 \
+    transformers==4.20.1 \
+    nlpaug==1.1.11
 # ------------------------------------------------------------------------
 # Add your python dependencies here, for example
-# RUN poetry add catboost transformers "tensorflow^2.9.1"
+# RUN pip install catboost transformers "tensorflow^2.9.1"
 # ------------------------------------------------------------------------
 
 
