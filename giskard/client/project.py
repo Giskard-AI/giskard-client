@@ -549,17 +549,22 @@ class GiskardProject:
             )
 
     @staticmethod
-    def validate_columns_columntypes(df: pd.DataFrame, column_types, target) -> pd.DataFrame:
+    def validate_columns_columntypes(df: pd.DataFrame, feature_types, target) -> pd.DataFrame:
+        columns_with_types = set(feature_types.keys())
 
-        if not set(column_types.keys()).issubset(set(df.columns)):
-            missing_columns = set(column_types.keys()) - set(df.columns)
+        if target in df.columns:
+            df = df.drop(target, axis=1)
+
+        df_columns = set(df.columns)
+        columns_with_types.discard(target)
+
+        if not columns_with_types.issubset(df_columns):
+            missing_columns = columns_with_types - df_columns
             raise ValueError(
                 f"Missing columns in dataframe according to column_types: {missing_columns}"
             )
-        elif not set(df.columns).issubset(set(column_types.keys())):
-            missing_columns = set(df.columns) - set(column_types.keys())
-            if target in missing_columns:
-                missing_columns.remove(target)
+        elif not df_columns.issubset(columns_with_types):
+            missing_columns = df_columns - columns_with_types
             if missing_columns:
                 raise ValueError(
                     f"Invalid column_types parameter: Please declare the type for "
@@ -569,21 +574,21 @@ class GiskardProject:
         nuniques=df.nunique()
         nuniques_max=20
         for column in df.columns:
-            if nuniques[column] <= nuniques_max and column_types[column] == 'numeric':
+            if nuniques[column] <= nuniques_max and feature_types[column] == SupportedColumnType.NUMERIC.value:
                 warnings.warn(
                     f"Feature '{column}' is declared as 'numeric' but has {nuniques[column]} (<= nuniques_max={nuniques_max}) distinct values. Are "
                     f"you sure it is not a 'category' feature?"
                 )
-            elif nuniques[column] > nuniques_max and column_types[column] == 'categorical':
+            elif nuniques[column] > nuniques_max and feature_types[column] == SupportedColumnType.CATEGORY.value:
                 warnings.warn(
-                    f"Feature '{column}' is declared as 'categorical' but has {nuniques[column]} (> nuniques_max={nuniques_max}) distinct values. Are "
+                    f"Feature '{column}' is declared as 'category' but has {nuniques[column]} (> nuniques_max={nuniques_max}) distinct values. Are "
                     f"you sure it is not a 'numeric' feature?"
                 )
 
         pandas_inferred_column_types = df.dtypes.to_dict()
         for column, dtype in pandas_inferred_column_types.items():
             if (
-                    column_types.get(column) == SupportedColumnType.NUMERIC.value
+                    feature_types.get(column) == SupportedColumnType.NUMERIC.value
                     and dtype == "object"
             ):
                 try:

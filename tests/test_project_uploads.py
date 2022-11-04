@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from giskard.client.model import SupportedColumnType
 from giskard.client.project import GiskardProject
 
 data = np.array(["g", "e", "e", "k", "s"])
@@ -69,33 +70,34 @@ def test_validate_deterministic_model():
 
 
 def test_validate_columns_columntypes(german_credit_data, german_credit_test_data):
+    with pytest.warns(UserWarning, match=r"Feature 'installment_as_income_perc' is declared as 'numeric' but has .* distinct values. Are you sure it is not a 'category' feature?"):
+        GiskardProject.validate_columns_columntypes(
+            german_credit_data.df,
+            german_credit_data.feature_types,
+            german_credit_data.target
+        )
     GiskardProject.validate_columns_columntypes(
         german_credit_data.df,
-        german_credit_data.column_types,
-        german_credit_data.target
-    )
-    GiskardProject.validate_columns_columntypes(
-        german_credit_data.df,
-        {c: german_credit_data.column_types[c] for c in german_credit_data.column_types if
+        {c: german_credit_data.feature_types[c] for c in german_credit_data.feature_types if
          c != german_credit_data.target},
         german_credit_data.target
     )
     GiskardProject.validate_columns_columntypes(
         german_credit_test_data.df,
-        german_credit_test_data.column_types,
+        german_credit_test_data.feature_types,
         german_credit_test_data.target
     )
     with pytest.raises(ValueError) as e:
         GiskardProject.validate_columns_columntypes(
             german_credit_data.df,
-            {c: german_credit_data.column_types[c] for c in german_credit_data.column_types if
+            {c: german_credit_data.feature_types[c] for c in german_credit_data.feature_types if
              c not in {german_credit_data.target, "sex"}},
             german_credit_data.target
         )
     assert e.match(r"Invalid column_types parameter: Please declare the type for {'sex'} columns")
 
     with pytest.raises(ValueError) as e:
-        new_ct = dict(german_credit_data.column_types)
+        new_ct = dict(german_credit_data.feature_types)
         new_ct["non-existing-column"] = "int64"
         GiskardProject.validate_columns_columntypes(
             german_credit_data.df,
@@ -103,3 +105,12 @@ def test_validate_columns_columntypes(german_credit_data, german_credit_test_dat
             german_credit_data.target
         )
     assert e.match(r"Missing columns in dataframe according to column_types: {'non-existing-column'}")
+
+    broken_types = dict(german_credit_test_data.feature_types)
+    broken_types['duration_in_month'] = SupportedColumnType.CATEGORY.value
+    with pytest.warns(UserWarning, match=r"Feature 'duration_in_month' is declared as 'category' but has .* Are you sure it is not a 'numeric' feature?") as w:
+        GiskardProject.validate_columns_columntypes(
+            german_credit_test_data.df,
+            broken_types,
+            german_credit_test_data.target
+        )
