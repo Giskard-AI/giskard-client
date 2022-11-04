@@ -572,7 +572,7 @@ class GiskardProject:
                 )
 
         nuniques=df.nunique()
-        nuniques_max=20
+        nuniques_max=2
         for column in df.columns:
             if nuniques[column] <= nuniques_max and feature_types[column] == SupportedColumnType.NUMERIC.value:
                 warnings.warn(
