@@ -11,6 +11,7 @@ import pkg_resources
 import psutil
 import tqdm
 
+import giskard
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model_explanation import (
     explain,
@@ -119,6 +120,7 @@ class MLWorkerServiceImpl(MLWorkerServicer):
                 system=platform.uname().system,
                 version=platform.uname().version,
             ),
+            giskard_client_version=giskard.__version__,
             pid=os.getpid(),
             process_start_time=int(current_process.create_time()),
             interpreter=sys.executable,
