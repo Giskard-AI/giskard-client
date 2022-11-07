@@ -590,7 +590,6 @@ class GiskardProject:
     @staticmethod
     def _validate_column_categorization(df: pd.DataFrame, feature_types):
         nuniques=df.nunique()
-        dtypes = df.dtypes
         nuniques_category = 5
         nuniques_numeric = 20
         nuniques_text = 200
