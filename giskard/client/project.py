@@ -594,28 +594,29 @@ class GiskardProject:
         nuniques_numeric = 20
         nuniques_text = 200
 
-        for column in df.columns:
-            if nuniques[column] <= nuniques_category and \
-                    (feature_types[column] == SupportedColumnType.NUMERIC.value or \
-                     feature_types[column] == SupportedColumnType.TEXT.value):
-                warnings.warn(
-                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (<= nuniques_category={nuniques_category}) distinct values. Are "
-                    f"you sure it is not a 'category' feature?", stacklevel=2
-                )
-            elif nuniques[column] > nuniques_text and is_string_dtype(df[column]) and \
-                    (feature_types[column] == SupportedColumnType.CATEGORY.value or \
-                     feature_types[column] == SupportedColumnType.NUMERIC.value):
-                warnings.warn(
-                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_text={nuniques_text}) distinct values. Are "
-                    f"you sure it is not a 'text' feature?", stacklevel=2
-                )
-            elif nuniques[column] > nuniques_numeric and is_numeric_dtype(df[column]) and \
-                    (feature_types[column] == SupportedColumnType.CATEGORY.value or \
-                     feature_types[column] == SupportedColumnType.TEXT.value):
-                warnings.warn(
-                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_numeric={nuniques_numeric}) distinct values. Are "
-                    f"you sure it is not a 'numeric' feature?", stacklevel=2
-                )
+        if len(df) > nuniques_numeric*2:
+            for column in df.columns:
+                if nuniques[column] <= nuniques_category and \
+                        (feature_types[column] == SupportedColumnType.NUMERIC.value or \
+                         feature_types[column] == SupportedColumnType.TEXT.value):
+                    warnings.warn(
+                        f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (<= nuniques_category={nuniques_category}) distinct values. Are "
+                        f"you sure it is not a 'category' feature?", stacklevel=2
+                    )
+                elif nuniques[column] > nuniques_text and is_string_dtype(df[column]) and \
+                        (feature_types[column] == SupportedColumnType.CATEGORY.value or \
+                         feature_types[column] == SupportedColumnType.NUMERIC.value):
+                    warnings.warn(
+                        f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_text={nuniques_text}) distinct values. Are "
+                        f"you sure it is not a 'text' feature?", stacklevel=2
+                    )
+                elif nuniques[column] > nuniques_numeric and is_numeric_dtype(df[column]) and \
+                        (feature_types[column] == SupportedColumnType.CATEGORY.value or \
+                         feature_types[column] == SupportedColumnType.TEXT.value):
+                    warnings.warn(
+                        f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_numeric={nuniques_numeric}) distinct values. Are "
+                        f"you sure it is not a 'numeric' feature?", stacklevel=2
+                    )
 
     @staticmethod
     def _validate_is_pandasdataframe(df):
