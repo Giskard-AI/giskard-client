@@ -5,6 +5,7 @@ from typing import List
 from urllib.parse import urljoin
 
 from requests.adapters import HTTPAdapter
+from requests.auth import AuthBase
 from requests_toolbelt import sessions
 
 import giskard
@@ -49,12 +50,23 @@ class ErrorHandlingAdapter(HTTPAdapter):
         return response
 
 
+class BearerAuth(AuthBase):
+    """Defines bearer authentication token as Authorization header"""
+
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = f"Bearer {self.token}"
+        return r
+
+
 class GiskardClient:
     def __init__(self, url: str, token: str):
         base_url = urljoin(url, "/api/v2/")
         self._session = sessions.BaseUrlSession(base_url=base_url)
         self._session.mount(base_url, ErrorHandlingAdapter())
-        self._session.headers.update({"Authorization": f"Bearer {token}"})
+        self._session.auth = BearerAuth(token)
         self.analytics = GiskardAnalyticsCollector()
         try:
             server_settings = self._session.get("settings").json()
