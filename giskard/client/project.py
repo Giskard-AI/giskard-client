@@ -572,17 +572,21 @@ class GiskardProject:
                 )
 
         nuniques=df.nunique()
-        nuniques_max=2
+        nuniques_cat_max = 2
+        nuniques_num_text_min= 100
         for column in df.columns:
-            if nuniques[column] <= nuniques_max and feature_types[column] == SupportedColumnType.NUMERIC.value:
+            if nuniques[column] <= nuniques_cat_max and \
+                (feature_types[column] == SupportedColumnType.NUMERIC.value or \
+                 feature_types[column] == SupportedColumnType.TEXT.value):
                 warnings.warn(
-                    f"Feature '{column}' is declared as 'numeric' but has {nuniques[column]} (<= nuniques_max={nuniques_max}) distinct values. Are "
+                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (<= nuniques_cat_max={nuniques_cat_max}) distinct values. Are "
                     f"you sure it is not a 'category' feature?"
                 )
-            elif nuniques[column] > nuniques_max and feature_types[column] == SupportedColumnType.CATEGORY.value:
+            elif nuniques[column] > nuniques_num_text_min and \
+                    feature_types[column] == SupportedColumnType.CATEGORY.value:
                 warnings.warn(
-                    f"Feature '{column}' is declared as 'category' but has {nuniques[column]} (> nuniques_max={nuniques_max}) distinct values. Are "
-                    f"you sure it is not a 'numeric' feature?"
+                    f"Feature '{column}' is declared as 'category' but has {nuniques[column]} (> nuniques_num_text_min={nuniques_num_text_min}) distinct values. Are "
+                    f"you sure it is not a 'numeric' or 'text' feature?"
                 )
 
         pandas_inferred_column_types = df.dtypes.to_dict()
