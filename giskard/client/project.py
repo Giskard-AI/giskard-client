@@ -4,6 +4,8 @@ from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
+from pandas.api.types import is_numeric_dtype
 import requests
 import cloudpickle
 from pandas.api.types import is_string_dtype
@@ -290,7 +292,7 @@ class GiskardProject:
             self._validate_target(target, df.keys())
         self.validate_columns_columntypes(df, column_types, target)
         self._validate_column_types(column_types)
-        self._validate_category_columns(df, column_types)
+        self._validate_column_categorization(df, column_types)
         raw_column_types = df.dtypes.apply(lambda x: x.name).to_dict()
         data = compress(save_df(df))
         return data, raw_column_types
@@ -488,7 +490,7 @@ class GiskardProject:
                     f"Please specify valid list of strings."
                 )
         if model_type == SupportedModelTypes.REGRESSION.value and classification_labels is not None:
-            warnings.warn("'classification_labels' parameter is ignored for regression model")
+            warnings.warn("'classification_labels' parameter is ignored for regression model", stacklevel=2)
             res = None
         return res
 
@@ -538,11 +540,13 @@ class GiskardProject:
     def _validate_classification_prediction(classification_labels, prediction):
         if not np.all(np.logical_and(prediction >= 0, prediction <= 1)):
             warnings.warn("Output of the prediction_function returns values out of range [0,1]. "
-                          "The output of Multiclass and Binary classifications should be within the range [0,1]"
+                          "The output of Multiclass and Binary classifications should be within the range [0,1]",
+                          stacklevel=2
                           )
         if not np.all(np.isclose(np.sum(prediction, axis=1), 1, atol=0.0000001)):
             warnings.warn("Sum of output values of prediction_function is not equal to 1."
-                          " For Multiclass and Binary classifications, the sum of probabilities should be 1")
+                          " For Multiclass and Binary classifications, the sum of probabilities should be 1",
+                          stacklevel=2)
         if prediction.shape[1] != len(classification_labels):
             raise ValueError(
                 "Prediction output label shape and classification_labels shape do not match"
@@ -571,24 +575,6 @@ class GiskardProject:
                     f"{missing_columns} columns"
                 )
 
-        nuniques=df.nunique()
-        nuniques_cat_max = 2
-        nuniques_num_text_min= 100
-        for column in df.columns:
-            if nuniques[column] <= nuniques_cat_max and \
-                (feature_types[column] == SupportedColumnType.NUMERIC.value or \
-                 feature_types[column] == SupportedColumnType.TEXT.value):
-                warnings.warn(
-                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (<= nuniques_cat_max={nuniques_cat_max}) distinct values. Are "
-                    f"you sure it is not a 'category' feature?"
-                )
-            elif nuniques[column] > nuniques_num_text_min and \
-                    feature_types[column] == SupportedColumnType.CATEGORY.value:
-                warnings.warn(
-                    f"Feature '{column}' is declared as 'category' but has {nuniques[column]} (> nuniques_num_text_min={nuniques_num_text_min}) distinct values. Are "
-                    f"you sure it is not a 'numeric' or 'text' feature?"
-                )
-
         pandas_inferred_column_types = df.dtypes.to_dict()
         for column, dtype in pandas_inferred_column_types.items():
             if (
@@ -602,12 +588,34 @@ class GiskardProject:
             return df
 
     @staticmethod
-    def _validate_category_columns(df: pd.DataFrame, column_types):
-        for name, types in column_types.items():
-            if types == SupportedColumnType.CATEGORY.value and len(df[name].unique()) > 30:
+    def _validate_column_categorization(df: pd.DataFrame, feature_types):
+        nuniques=df.nunique()
+        dtypes = df.dtypes
+        nuniques_category = 5
+        nuniques_numeric = 20
+        nuniques_text = 200
+
+        for column in df.columns:
+            if nuniques[column] <= nuniques_category and \
+                    (feature_types[column] == SupportedColumnType.NUMERIC.value or \
+                     feature_types[column] == SupportedColumnType.TEXT.value):
                 warnings.warn(
-                    f"Categorical feature '{name}' contains {len(df[name].unique())} distinct values. If "
-                    f"necessary use 'numeric' or 'text' in column_types instead"
+                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (<= nuniques_category={nuniques_category}) distinct values. Are "
+                    f"you sure it is not a 'category' feature?", stacklevel=2
+                )
+            elif nuniques[column] > nuniques_text and is_string_dtype(df[column]) and \
+                    (feature_types[column] == SupportedColumnType.CATEGORY.value or \
+                     feature_types[column] == SupportedColumnType.NUMERIC.value):
+                warnings.warn(
+                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_text={nuniques_text}) distinct values. Are "
+                    f"you sure it is not a 'text' feature?", stacklevel=2
+                )
+            elif nuniques[column] > nuniques_numeric and is_numeric_dtype(df[column]) and \
+                    (feature_types[column] == SupportedColumnType.CATEGORY.value or \
+                     feature_types[column] == SupportedColumnType.TEXT.value):
+                warnings.warn(
+                    f"Feature '{column}' is declared as '{feature_types[column]}' but has {nuniques[column]} (> nuniques_numeric={nuniques_numeric}) distinct values. Are "
+                    f"you sure it is not a 'numeric' feature?", stacklevel=2
                 )
 
     @staticmethod
@@ -623,7 +631,7 @@ class GiskardProject:
 
         if not np.allclose(prev_prediction, new_prediction):
             warnings.warn("Model is stochastic and not deterministic. Prediction function returns different results"
-                          "after being invoked for the same data multiple times.")
+                          "after being invoked for the same data multiple times.", stacklevel=2)
 
     @staticmethod
     def _validate_model_is_pickleable(prediction_function):
