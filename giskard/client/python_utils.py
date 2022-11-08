@@ -1,6 +1,7 @@
 """Various utility functions to manage Python environments"""
 
 import os
+import warnings
 from platform import python_version
 
 
@@ -18,3 +19,7 @@ def get_python_requirements() -> str:
 
 def get_python_version() -> str:
     return python_version()
+
+
+def warning(content: str):
+    warnings.warn(content, stacklevel=2)

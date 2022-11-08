@@ -1,6 +1,5 @@
 """API Client to interact with the Giskard app"""
 import logging
-import warnings
 from typing import List
 from urllib.parse import urljoin
 
@@ -11,6 +10,7 @@ from requests_toolbelt import sessions
 import giskard
 from giskard.client.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.client.project import GiskardProject
+from giskard.client.python_utils import warning
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class GiskardClient:
             ).json()
         except GiskardError as e:
             if e.code == "error.http.409":
-                warnings.warn(
+                warning(
                     "This project key already exists. "
                     "If you want to reuse existing project use get_project(“project_key”) instead"
                 )
