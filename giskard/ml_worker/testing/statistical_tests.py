@@ -1,10 +1,12 @@
 import pandas as pd
+import numpy as np
+from typing import Callable
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model import GiskardModel
 from giskard.ml_worker.generated.ml_worker_pb2 import SingleTestResult
 from giskard.ml_worker.testing.abstract_test_collection import AbstractTestCollection
-import numpy as np
+
 
 class StatisticalTests(AbstractTestCollection):
 
@@ -24,29 +26,37 @@ class StatisticalTests(AbstractTestCollection):
                 return np.squeeze(raw_prediction.argmax(axis=1) == positive_idx)
 
     def test_disparate_impact(self,
-                              protected_ds: GiskardDataset,
-                              unprotected_ds: GiskardDataset,
+                              gsk_dataset: GiskardDataset,
+                              protected_slice: Callable[[pd.DataFrame], pd.DataFrame],
+                              unprotected_slice: Callable[[pd.DataFrame], pd.DataFrame],
                               model: GiskardModel,
                               positive_outcome,
                               threshold=0.8,
                               classification_label=None,
                               ) -> SingleTestResult:
 
-        #if positive_outcome not in protected_df.columns:
-        #    raise ValueError(
-        #        f"The positive outcome chosen {positive_outcome} is not part of the dataframe columns {protected_df.columns}."
-        #    )
+        testing = gsk_dataset.df[gsk_dataset.target]
 
-        positive_idx = np.where(model.classification_labels==positive_outcome)
+        if positive_outcome not in gsk_dataset.df[gsk_dataset.target].values:
+            raise ValueError(
+                f"The positive outcome chosen {positive_outcome} is not part of the dataset columns {gsk_dataset.columns}."
+            )
 
-        protected_ds.df.reset_index(drop=True, inplace=True)
-        protected_ds.df = protected_ds.df[protected_ds.df[protected_ds.target] == positive_outcome]
-        protected_predictions = StatisticalTests._predict_result(protected_ds,model,positive_idx)
+        gsk_dataset.df.reset_index(drop=True, inplace=True)
+        protected_ds=gsk_dataset.slice(protected_slice)
+        unprotected_ds=gsk_dataset.slice(unprotected_slice)
 
-        unprotected_ds.df.reset_index(drop=True, inplace=True)
-        unprotected_ds.df = unprotected_ds.df[unprotected_ds.df[unprotected_ds.target] == positive_outcome]
-        unprotected_predictions = StatisticalTests._predict_result(unprotected_ds,model,positive_idx)
+        if protected_ds.df.equals(unprotected_ds.df):
+            raise ValueError(
+                f"The protected and unprotected datasets are equal. Please check that you chose different slices."
+            )
+        protected_ds_po = protected_ds.slice(lambda df: df[df[gsk_dataset.target] == positive_outcome])
+        unprotected_ds_po = unprotected_ds.slice(lambda df: df[df[gsk_dataset.target] == positive_outcome])
 
+        positive_idx = np.where(model.classification_labels == positive_outcome)
+
+        protected_predictions = StatisticalTests._predict_result(protected_ds_po, model, positive_idx)
+        unprotected_predictions = StatisticalTests._predict_result(unprotected_ds_po, model, positive_idx)
 
         protected_proba = np.count_nonzero(protected_predictions)/protected_predictions.shape[0]
         unprotected_proba = np.count_nonzero(unprotected_predictions)/unprotected_predictions.shape[0]
@@ -55,8 +65,8 @@ class StatisticalTests(AbstractTestCollection):
 
         return self.save_results(
             SingleTestResult(
-                actual_slices_size=[len(protected_ds)],
-                reference_slices_size=[len(unprotected_ds)],
+                actual_slices_size=[len(protected_ds_po)],
+                reference_slices_size=[len(unprotected_ds_po)],
                 metric=DI,
                 passed=DI > threshold,
             )
