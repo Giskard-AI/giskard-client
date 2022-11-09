@@ -11,7 +11,7 @@ from giskard.ml_worker.testing.functions import GiskardTestFunctions
         ("enron_data", "enron_model", 0, 0.1, 0.32, 25),
     ],
 )
-def test_heuristic(data, model, threshold, label, expected_metric, actual_slices_size, request):
+def test_statistical(data, model, threshold, label, expected_metric, actual_slices_size, request):
     tests = GiskardTestFunctions()
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
@@ -36,7 +36,7 @@ def test_heuristic(data, model, threshold, label, expected_metric, actual_slices
         ("enron_data", "enron_model", 0, 0.01, 0.1, 10),
     ],
 )
-def test_heuristic_filtered(
+def test_statistical_filtered(
     data, model, threshold, label, expected_metric, actual_slices_size, request
 ):
     tests = GiskardTestFunctions()
