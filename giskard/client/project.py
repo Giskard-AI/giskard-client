@@ -121,10 +121,12 @@ class GiskardProject:
             "id": answer_json['testId'],
             "name": answer_json['testName'],
             "status": answer_json['status'],
-            "metric": answer_json['result'][0]['result']['metric'],
+
             "executionDate": answer_json['executionDate'],
             "message": answer_json['message']
-        } 
+        }
+        if answer_json['status'] != 'ERROR':
+            res["metric"] = answer_json['result'][0]['result']['metric']
         return res
 
     def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
