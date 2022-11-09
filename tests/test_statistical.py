@@ -110,7 +110,6 @@ def test_disparate_impact(german_credit_data, german_credit_model):
         unprotected_slice=lambda df: df[df.sex == "male"],
         model=german_credit_model,
         positive_outcome="Default",
-        threshold=0.8,
-        classification_label=None
+        threshold=0.8
     )
     assert results.passed

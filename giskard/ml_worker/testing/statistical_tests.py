@@ -160,9 +160,53 @@ class StatisticalTests(AbstractTestCollection):
                               unprotected_slice: Callable[[pd.DataFrame], pd.DataFrame],
                               model: GiskardModel,
                               positive_outcome,
-                              threshold=0.8,
-                              classification_label=None,
-                              ) -> SingleTestResult:
+                              threshold=0.8) -> SingleTestResult:
+
+        """
+        Summary: Tests if the model is biased more towards an unprotected slice of the dataset over a protected slice.
+        Note that this test reflects only a possible bias in the model while being agnostic to any bias in the dataset
+        it trained on. The Disparate Impact (DI) is only valid for classification models and is computed as the ratio
+        between the average count of correct predictions for the protected_slice over the unprotected_slice given a
+        certain positive_outcome.
+
+        Description: Calculate the Disparate Impact between a protected and unprotected slice of a dataset. Otherwise
+        known as the "80 percent" rule, the Disparate Impact determines if a model was having an "adverse impact" on a
+        protected (or minority in some cases) group.
+
+        Example: The rule was originally based on the rates at which job applicants were hired. For example, if XYZ
+        Company hired 50 percent of the men applying for work in a predominantly male occupation while hiring only 20
+        percent of the female applicants, one could look at the ratio of those two hiring rates to judge whether there
+        might be a discrimination problem. The ratio of 20:50 means that the rate of hiring for female applicants is
+        only 40 percent of the rate of hiring for male applicants. That is, 20 divided by 50 equals
+        0.40, which is equivalent to 40 percent. Clearly, 40 percent is well below the 80 percent that was arbitrarily
+        set as an acceptable difference in hiring rates. Therefore, in this example, XYZ Company could have been called
+        upon to prove that there was a legitimate reason for hiring men at a rate so much higher than the rate of hiring
+        women.
+
+        Args:
+              gsk_dataset(GiskardDataset):
+                  Dataset used to compute the test
+              protected_slice(Callable):
+                  Slice that defines the protected group from the full dataset given
+              unprotected_slice(Callable):
+                  Slice that defines the unprotected group from the full dataset given
+              model(GiskardModel):
+                  Model used to compute the test
+              positive_outcome(str or float):
+                  The target value that is considered a positive outcome in the dataset
+              threshold(float):
+                  Threshold below which the DI test is considered to fail, by default 80%
+
+        Returns:
+              actual_slices_size:
+                  Length of actual_slice tested
+              message:
+                  Test result message
+              metric:
+                  The t-test in terms of p-value between unchanged rows over the perturbed rows
+              passed:
+                  TRUE if the p-value of the t-test between (A) and (B)+window_size/2 < critical_quantile && the p-value of the t-test between (B)-window_size/2 and (A) < critical_quantile
+        """
 
         testing = gsk_dataset.df[gsk_dataset.target]
 
@@ -194,9 +238,7 @@ class StatisticalTests(AbstractTestCollection):
 
         return self.save_results(
             SingleTestResult(
-                actual_slices_size=[len(protected_ds_po)],
-                reference_slices_size=[len(unprotected_ds_po)],
                 metric=DI,
-                passed=DI > threshold,
+                passed=DI > threshold
             )
         )
