@@ -1,5 +1,5 @@
 # `python-base` sets up all our shared environment variables
-FROM python:3.7.13 as python-base
+FROM python:3.7.13-buster as python-base
 
     # python
 ENV PYTHONUNBUFFERED=1 \
@@ -57,8 +57,16 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 
 
 # the libraries below are required for demo projects
+RUN /bin/bash -c 'set -ex && \
+    ARCH=`uname -m` && \
+    if [ "$ARCH" == 'arm64' ] || ["$ARCH" == 'x86_64']; then \
+      pip install catboost==1.0.6; \
+    else \
+      echo "architecture: $ARCH, not installing catboost"; \
+    fi'
+
+
 RUN pip install  \
-    catboost==1.0.6  \
     torch==1.12.0 \
     transformers==4.20.1 \
     nlpaug==1.1.11
