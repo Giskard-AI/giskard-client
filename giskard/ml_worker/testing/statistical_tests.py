@@ -198,14 +198,10 @@ class StatisticalTests(AbstractTestCollection):
                   Threshold below which the DI test is considered to fail, by default 80%
 
         Returns:
-              actual_slices_size:
-                  Length of actual_slice tested
-              message:
-                  Test result message
               metric:
-                  The t-test in terms of p-value between unchanged rows over the perturbed rows
+                  The disparate impact ratio
               passed:
-                  TRUE if the p-value of the t-test between (A) and (B)+window_size/2 < critical_quantile && the p-value of the t-test between (B)-window_size/2 and (A) < critical_quantile
+                  TRUE if the disparate impact ratio > threshold
         """
 
         testing = gsk_dataset.df[gsk_dataset.target]
