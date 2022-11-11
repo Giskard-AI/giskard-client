@@ -47,6 +47,9 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
+          set: |
+            *.platform=linux/amd64
+            *.platform=linux/arm64
 
 #      - name: Invoke deployment hook
 #        if: ${{ steps.extract_branch.outputs.branch == 'main' }}
@@ -54,6 +57,8 @@ jobs:
 #          curl -L --silent --max-time 900 ${{ secrets.TEST_SERVER_WEBHOOK_URL_BASE }}/redeploy-dev
 
       - name: Remove containers and volumes
-        run: docker system prune -a -f
+        run: |
+          docker system prune -a -f
+          docker builder prune --force --keep-storage=10GB
 
 
