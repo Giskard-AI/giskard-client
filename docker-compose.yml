@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  ml-worker:
+    image: 'docker.io/giskardai/ml-worker:${TAG-latest}'
+    hostname: giskard-embedded-docker-worker
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: .
+      x-bake:
+        platforms:
+          - linux/arm64
+          - linux/amd64
