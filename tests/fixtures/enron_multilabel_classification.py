@@ -95,5 +95,5 @@ def enron_model(enron_data) -> GiskardModel:
         model_type="classification",
         feature_names=list(input_types),
         classification_threshold=0.5,
-        classification_labels=clf.classes_,
+        classification_labels=list(clf.classes_),
     )

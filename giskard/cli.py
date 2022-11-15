@@ -1,9 +1,11 @@
-import asyncio
-import logging
-import os
+import sys
 
+import asyncio
 import click
 import lockfile
+import logging
+import os
+import platform
 import psutil
 from click import INT, STRING
 from lockfile.pidlockfile import PIDLockFile, read_pid_from_pidfile, remove_existing_pidfile
@@ -12,6 +14,7 @@ from giskard.cli_utils import create_pid_file_path, remove_stale_pid_file, run_d
 from giskard.client.analytics_collector import GiskardAnalyticsCollector, anonymize
 from giskard.ml_worker.ml_worker import start_ml_worker
 from giskard.path_utils import run_dir
+from giskard.settings import settings
 
 run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -104,6 +107,8 @@ def _start_command(is_server, host, port, is_daemon):
     if is_daemon:
         start_msg += " daemon"
     logger.info(start_msg)
+    logger.info(f"Python: {sys.executable} ({platform.python_version()})")
+    logger.info(f"Giskard Home: {settings.home_dir}")
     pid_file_path = create_pid_file_path(is_server, host, port)
     pid_file = PIDLockFile(pid_file_path)
     remove_stale_pid_file(pid_file)
