@@ -9,7 +9,7 @@ from giskard.ml_worker.generated.ml_worker_pb2 import (
     SerializedGiskardModel,
 )
 from giskard.ml_worker.utils.logging import timer
-from giskard.path_utils import model_path
+from giskard.path_utils import model_path, dataset_path
 
 
 @timer()
@@ -35,9 +35,9 @@ def deserialize_model(serialized_model: SerializedGiskardModel) -> GiskardModel:
 
 @timer()
 def deserialize_dataset(serialized_dataset: SerializedGiskardDataset) -> GiskardDataset:
-    mp = model_path(serialized_dataset.project_key, serialized_dataset.file_name)
-    assert mp.exists(), f"Dataset is not uploaded: {mp}"
-    ds_stream = open(mp, 'rb')
+    dp = dataset_path(serialized_dataset.project_key, serialized_dataset.file_name)
+    assert dp.exists(), f"Dataset is not uploaded: {dp}"
+    ds_stream = open(dp, 'rb')
 
     deserialized_dataset = GiskardDataset(
         df=pd.read_csv(
