@@ -57,14 +57,9 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 
 
 # the libraries below are required for demo projects
-RUN /bin/bash -c 'set -ex && \
-    ARCH=`uname -m` && \
-    if [ "$ARCH" == 'arm64' ] || ["$ARCH" == 'x86_64']; then \
-      pip install catboost==1.0.6; \
-    else \
-      echo "architecture: $ARCH, not installing catboost"; \
-    fi'
 
+# Catboost can't be installed on ARM machines, so skip it if it fails
+RUN pip install catboost==1.0.6; exit 0
 
 RUN pip install  \
     torch==1.12.0 \
