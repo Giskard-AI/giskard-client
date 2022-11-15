@@ -4,9 +4,8 @@ from typing import Callable
 
 from giskard.ml_worker.core.giskard_dataset import GiskardDataset
 from giskard.ml_worker.core.model import GiskardModel
-from giskard.ml_worker.generated.ml_worker_pb2 import SingleTestResult
+from giskard.ml_worker.generated.ml_worker_pb2 import SingleTestResult, TestMessage, TestMessageType
 from giskard.ml_worker.testing.abstract_test_collection import AbstractTestCollection
-
 
 class StatisticalTests(AbstractTestCollection):
     def test_right_label(
@@ -150,9 +149,13 @@ class StatisticalTests(AbstractTestCollection):
             threshold = model.classification_threshold
 
             if threshold is not None and len(labels) == 2:
-                return np.squeeze((raw_prediction[:, 1] > threshold).astype(int) == positive_idx)
+                output = np.squeeze((raw_prediction[:, 1] > threshold).astype(int) == positive_idx).astype('int')
+            elif threshold is None and len(labels) == 2:
+                threshold=0.5
+                output = ((raw_prediction[:, 1] > threshold).astype(int)) == positive_idx
             else:
-                return np.squeeze(raw_prediction.argmax(axis=1) == positive_idx)
+                output = np.squeeze(raw_prediction.argmax(axis=1) == positive_idx).astype('int')
+            return output
 
     def test_disparate_impact(self,
                               gsk_dataset: GiskardDataset,
@@ -160,7 +163,8 @@ class StatisticalTests(AbstractTestCollection):
                               unprotected_slice: Callable[[pd.DataFrame], pd.DataFrame],
                               model: GiskardModel,
                               positive_outcome,
-                              threshold=0.8) -> SingleTestResult:
+                              min_threshold=0.8,
+                              max_threshold=1.25) -> SingleTestResult:
 
         """
         Summary: Tests if the model is biased more towards an unprotected slice of the dataset over a protected slice.
@@ -194,14 +198,16 @@ class StatisticalTests(AbstractTestCollection):
                   Model used to compute the test
               positive_outcome(str or float):
                   The target value that is considered a positive outcome in the dataset
-              threshold(float):
-                  Threshold below which the DI test is considered to fail, by default 80%
+              min_threshold(float):
+                  Threshold below which the DI test is considered to fail, by default 0.8
+              max_threshold(float):
+                  Threshold above which the DI test is considered to fail, by default 1.25
 
         Returns:
               metric:
                   The disparate impact ratio
               passed:
-                  TRUE if the disparate impact ratio > threshold
+                  TRUE if the disparate impact ratio > min_threshold && disparate impact ratio < max_threshold
         """
 
         testing = gsk_dataset.df[gsk_dataset.target]
@@ -219,22 +225,26 @@ class StatisticalTests(AbstractTestCollection):
             raise ValueError(
                 f"The protected and unprotected datasets are equal. Please check that you chose different slices."
             )
-        protected_ds_po = protected_ds.slice(lambda df: df[df[gsk_dataset.target] == positive_outcome])
-        unprotected_ds_po = unprotected_ds.slice(lambda df: df[df[gsk_dataset.target] == positive_outcome])
 
-        positive_idx = np.where(model.classification_labels == positive_outcome)
+        positive_idx = list(model.classification_labels).index(positive_outcome)
 
-        protected_predictions = StatisticalTests._predict_result(protected_ds_po, model, positive_idx)
-        unprotected_predictions = StatisticalTests._predict_result(unprotected_ds_po, model, positive_idx)
+        protected_predictions = StatisticalTests._predict_result(protected_ds, model, positive_idx)
+        unprotected_predictions = StatisticalTests._predict_result(unprotected_ds, model, positive_idx)
 
-        protected_proba = np.count_nonzero(protected_predictions)/protected_predictions.shape[0]
-        unprotected_proba = np.count_nonzero(unprotected_predictions)/unprotected_predictions.shape[0]
 
+        protected_proba = np.count_nonzero(protected_predictions)/len(protected_ds.df)
+        unprotected_proba = np.count_nonzero(unprotected_predictions)/len(unprotected_ds.df)
         DI = protected_proba/unprotected_proba
+
+        messages = [TestMessage(
+            type=TestMessageType.INFO,
+            text=f"min_threshold = {min_threshold}, max_threshold = {max_threshold}"
+        )]
 
         return self.save_results(
             SingleTestResult(
                 metric=DI,
-                passed=DI > threshold
+                passed=(DI > min_threshold)*(DI < max_threshold),
+                messages = messages
             )
         )
