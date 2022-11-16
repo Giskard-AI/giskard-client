@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.stats as stats
 
 def paired_t_test(population_1, population_2, alternative, critical_quantile):
@@ -14,7 +15,10 @@ def paired_t_test(population_1, population_2, alternative, critical_quantile):
     if alternative not in ["less", "greater"]:
         raise ValueError("Incorrect alternative hypothesis! It has to be one of the following: ['less', 'greater']")
 
-    stat, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
+    if np.array_equal(population_1, population_2):
+        p_value = 1.
+    else:
+        stat, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
 
     if p_value > critical_quantile:
         return False, p_value
@@ -36,8 +40,15 @@ def equivalence_t_test(population_1, population_2, window_size, critical_quantil
     population_2_up = population_2 + window_size/2.
     population_2_low = population_2 - window_size/2.
 
-    p_value_up = stats.ttest_rel(population_1, population_2_up, alternative="less")[1]
-    p_value_low = stats.ttest_rel(population_1, population_2_low, alternative="greater")[1]
+    if np.array_equal(population_1, population_2_up):
+        p_value_up = 0.
+    else:
+        p_value_up = stats.ttest_rel(population_1, population_2_up, alternative="less")[1]
+
+    if np.array_equal(population_1, population_2_low):
+        p_value_low = 0.
+    else:
+        p_value_low = stats.ttest_rel(population_1, population_2_low, alternative="greater")[1]
 
     test_up = p_value_up < critical_quantile
     test_low = p_value_low < critical_quantile
@@ -65,7 +76,10 @@ def paired_wilcoxon(population_1, population_2, alternative, critical_quantile):
         raise ValueError(
             "Incorrect alternative hypothesis! It has to be one of the following: ['less', 'greater']")
 
-    stat, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
+    if np.array_equal(population_1, population_2):
+        p_value = 1.
+    else:
+        stat, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
 
     if p_value > critical_quantile:
         return False, p_value
@@ -88,8 +102,15 @@ def equivalence_wilcoxon(population_1, population_2, window_size, critical_quant
     population_2_up = population_2 + window_size/2.
     population_2_low = population_2 - window_size/2.
 
-    p_value_up = stats.wilcoxon(population_1, population_2_up, alternative="less")[1]
-    p_value_low = stats.wilcoxon(population_1, population_2_low, alternative="greater")[1]
+    if np.array_equal(population_1, population_2_up):
+        p_value_up = 0.
+    else:
+        p_value_up = stats.wilcoxon(population_1, population_2_up, alternative="less")[1]
+
+    if np.array_equal(population_1, population_2_low):
+        p_value_low = 0.
+    else:
+        p_value_low = stats.wilcoxon(population_1, population_2_low, alternative="greater")[1]
 
     test_up = p_value_up < critical_quantile
     test_low = p_value_low < critical_quantile
