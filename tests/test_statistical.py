@@ -2,7 +2,6 @@ import pytest
 
 from giskard.ml_worker.testing.functions import GiskardTestFunctions
 
-
 @pytest.mark.parametrize(
     "data,model,label,threshold,expected_metric,actual_slices_size",
     [
@@ -109,7 +108,6 @@ def test_disparate_impact(german_credit_data, german_credit_model):
         protected_slice=lambda df: df[df.sex == "female"],
         unprotected_slice=lambda df: df[df.sex == "male"],
         model=german_credit_model,
-        positive_outcome="Default",
-        threshold=0.8
+        positive_outcome="Default"
     )
-    assert results.passed
+    assert not results.passed, f"DI = {results.metric}"
