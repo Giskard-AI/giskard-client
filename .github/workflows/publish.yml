@@ -12,6 +12,18 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set up Docker Buildx
+        id: builder
+        uses: docker/setup-buildx-action@master
+
+
+      - name: "Append ARM buildx builder from AWS"
+        uses: baschny/append-buildx-action@v1
+        with:
+          builder: ${{ steps.builder.outputs.name }}
+          endpoint: ssh://${{ secrets.ARM_SSH_CONNECTION_STRING }}
+          ssh_private_key: ${{ secrets.ARM_SSH_PRIVATE_KEY }}
+
       - name: Set tag name
         id: tag
         run: |
@@ -33,11 +45,15 @@ jobs:
         with:
           pypi_token: ${{ secrets.PYPI_TOKEN }}
 
-      - name: Build ML Worker image
-        run: make VERSION=${{ steps.tag.outputs.version }} docker-build-nocache
-
-      - name: Push ML Worker image to Docker registry
-        run: make VERSION=${{ steps.tag.outputs.version }} docker-push
+      - name: Build and push docker image
+        uses: docker/bake-action@master
+        env:
+          TAG: ${{ steps.tag.outputs.version }}
+        with:
+          push: ${{ steps.extract_branch.outputs.branch == 'main' }}
+          set: |
+            *.platform=linux/amd64
+            *.platform=linux/arm64
 
       - name: Tag images as <latest>
         if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
@@ -46,7 +62,7 @@ jobs:
           TAG: ${{ steps.tag.outputs.version }}
         run: docker tag "${IMAGE}":"${TAG}" "${IMAGE}":latest
 
-      - name: Push <latest> images to ECR
+      - name: Push <latest> images to Hub
         if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
         run: make VERSION=latest docker-push
 
@@ -54,4 +70,6 @@ jobs:
         run: curl -L --silent --max-time 900 ${{ secrets.TEST_SERVER_WEBHOOK_URL_BASE }}/redeploy-prod
 
       - name: Remove containers and volumes
-        run: docker system prune -a -f
+        run: |
+          docker system prune -a -f
+          docker builder prune --force --keep-storage=10GB
