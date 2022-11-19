@@ -3,6 +3,7 @@ import logging
 
 import grpc
 
+from giskard.ml_worker.utils.error_interceptor import ErrorInterceptor
 from giskard.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ async def _start_grpc_server(is_server=False):
     from giskard.ml_worker.utils.network import find_free_port
 
     server = grpc.aio.server(
-        # interceptors=[ErrorInterceptor()],
+        interceptors=[ErrorInterceptor()],
         options=[
             ("grpc.max_send_message_length", settings.max_send_message_length_mb * 1024 ** 2),
             ("grpc.max_receive_message_length", settings.max_receive_message_length_mb * 1024 ** 2),
