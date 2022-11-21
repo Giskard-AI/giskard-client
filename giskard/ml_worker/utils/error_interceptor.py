@@ -52,5 +52,8 @@ class ErrorInterceptor(grpc.aio.ServerInterceptor):
             return wrapper
 
         handler = await continuation(handler_call_details)
+        if handler and (handler.request_streaming or
+                        handler.response_streaming):
+            return handler
 
         return wrap_server_method_handler(_wrapper, handler)
