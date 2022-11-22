@@ -130,7 +130,17 @@ class GiskardProject:
         return res
 
     def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
+        self.analytics.track(
+            "execute_test",
+            {
+                "test_id": anonymize(test_id),
+                "actual_ds_id": anonymize(actual_ds_id),
+                "reference_ds_id": anonymize(reference_ds_id),
+                "model_id": anonymize(model_id),
+            },
+        )
         assert test_id is not None, "test_id should be specified"
+
         self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_id=test_id
         )
@@ -139,6 +149,15 @@ class GiskardProject:
 
 
     def execute_test_suite(self, test_suite_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
+        self.analytics.track(
+            "execute_test_suite",
+            {
+                "test_suite_id": anonymize(test_suite_id),
+                "actual_ds_id": anonymize(actual_ds_id),
+                "reference_ds_id": anonymize(reference_ds_id),
+                "model_id": anonymize(model_id),
+            },
+        )
         assert test_suite_id is not None, "test_suite_id should be specified"
         self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_suite_id=test_suite_id,
