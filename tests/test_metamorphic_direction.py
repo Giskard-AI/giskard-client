@@ -113,3 +113,91 @@ def test_metamorphic_increasing_exception(german_credit_test_data, german_credit
             perturbation_dict=perturbation,
             threshold=0.5,
         )
+
+def test_metamorphic_increasing_t_test(german_credit_test_data, german_credit_model):
+    perturbation = {"sex": lambda x: "female" if x.sex == "male" else "male"}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_increasing_t_test(df=german_credit_test_data,
+                                                                   model=german_credit_model,
+                                                                   perturbation_dict=perturbation,
+                                                                   critical_quantile=0.05,
+                                                                   classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_decreasing_t_test(german_credit_test_data, german_credit_model):
+    perturbation = {"sex": lambda x: "female" if x.sex == "male" else "male"}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_decreasing_t_test(df=german_credit_test_data,
+                                                                   model=german_credit_model,
+                                                                   perturbation_dict=perturbation,
+                                                                   critical_quantile=0.05,
+                                                                   classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_increasing_wilcoxon(german_credit_test_data, german_credit_model):
+    perturbation = {"sex": lambda x: "female" if x.sex == "male" else "male"}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_increasing_wilcoxon(df=german_credit_test_data,
+                                                                     model=german_credit_model,
+                                                                     perturbation_dict=perturbation,
+                                                                     critical_quantile=0.05,
+                                                                     classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_decreasing_wilcoxon(german_credit_test_data, german_credit_model):
+    perturbation = {"sex": lambda x: "female" if x.sex == "male" else "male"}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_decreasing_wilcoxon(df=german_credit_test_data,
+                                                                     model=german_credit_model,
+                                                                     perturbation_dict=perturbation,
+                                                                     critical_quantile=0.05,
+                                                                     classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_increasing_t_test_nopert(german_credit_test_data, german_credit_model):
+    perturbation = {}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_increasing_t_test(df=german_credit_test_data,
+                                                                   model=german_credit_model,
+                                                                   perturbation_dict=perturbation,
+                                                                   critical_quantile=0.05,
+                                                                   classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_decreasing_t_test_nopert(german_credit_test_data, german_credit_model):
+    perturbation = {}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_decreasing_t_test(df=german_credit_test_data,
+                                                                   model=german_credit_model,
+                                                                   perturbation_dict=perturbation,
+                                                                   critical_quantile=0.05,
+                                                                   classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_increasing_wilcoxon_nopert(german_credit_test_data, german_credit_model):
+    perturbation = {}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_increasing_wilcoxon(df=german_credit_test_data,
+                                                                     model=german_credit_model,
+                                                                     perturbation_dict=perturbation,
+                                                                     critical_quantile=0.05,
+                                                                     classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_decreasing_wilcoxon_nopert(german_credit_test_data, german_credit_model):
+    perturbation = {}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_decreasing_wilcoxon(df=german_credit_test_data,
+                                                                     model=german_credit_model,
+                                                                     perturbation_dict=perturbation,
+                                                                     critical_quantile=0.05,
+                                                                     classification_label="Default")
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert not results.passed, f"metric = {results.metric}"

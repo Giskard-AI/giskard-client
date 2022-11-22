@@ -108,6 +108,6 @@ def test_disparate_impact(german_credit_data, german_credit_model):
         protected_slice=lambda df: df[df.sex == "female"],
         unprotected_slice=lambda df: df[df.sex == "male"],
         model=german_credit_model,
-        positive_outcome="Default"
+        positive_outcome="Not default"
     )
-    assert not results.passed, f"DI = {results.metric}"
+    assert results.passed, f"DI = {results.metric}"
