@@ -16,7 +16,6 @@ jobs:
         id: builder
         uses: docker/setup-buildx-action@master
 
-
       - name: "Append ARM buildx builder from AWS"
         uses: baschny/append-buildx-action@v1
         with:
@@ -45,31 +44,34 @@ jobs:
         with:
           pypi_token: ${{ secrets.PYPI_TOKEN }}
 
-      - name: Build and push docker image
-        uses: docker/bake-action@master
-        env:
-          TAG: ${{ steps.tag.outputs.version }}
-        with:
-          push: ${{ steps.extract_branch.outputs.branch == 'main' }}
-          set: |
-            *.platform=linux/amd64
-            *.platform=linux/arm64
-
-      - name: Tag images as <latest>
+      - name: Build <current version>+latest ml-worker image
         if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
         env:
           IMAGE: docker.io/giskardai/ml-worker
-          TAG: ${{ steps.tag.outputs.version }}
-        run: docker tag "${IMAGE}":"${TAG}" "${IMAGE}":latest
+        run: |
+          docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag $IMAGE:latest \
+          --tag $IMAGE:${{ steps.tag.outputs.version }} \
+          --file ./docker/Dockerfile \
+          --push \
+          .
 
-      - name: Push <latest> images to Hub
-        if: ${{ steps.tag.outputs.name == steps.tag.outputs.latest_version }}
-        run: make VERSION=latest docker-push
+      - name: Build <current version> ml-worker image
+        if: ${{ steps.tag.outputs.name != steps.tag.outputs.latest_version }}
+        env:
+          IMAGE: docker.io/giskardai/ml-worker
+        run: |
+          docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --tag $IMAGE:${{ steps.tag.outputs.version }} \
+          --file ./docker/Dockerfile \
+          --push \
+          .
 
       - name: Invoke deployment hook
         run: curl -L --silent --max-time 900 ${{ secrets.TEST_SERVER_WEBHOOK_URL_BASE }}/redeploy-prod
 
-      - name: Remove containers and volumes
-        run: |
-          docker system prune -a -f
-          docker builder prune --force --keep-storage=10GB
+      - name: Cleanup containers
+        run: docker builder prune --force --keep-storage=10GB
+
