@@ -1,19 +1,18 @@
-from typing import Callable, Iterable, Union
-
 import functools
 import logging
 import traceback
+from typing import Callable, Iterable, Union, Awaitable
 
 import grpc
 from google.protobuf import any_pb2
 from google.protobuf.message import Message
-from google.rpc.error_details_pb2 import DebugInfo
 from google.rpc.status_pb2 import Status
-from grpc import ServicerContext, StatusCode
+from grpc import ServicerContext, StatusCode, aio
 from grpc.experimental import wrap_server_method_handler
 from grpc_status import rpc_status
 
 from giskard.ml_worker.exceptions.IllegalArgumentError import CodedError
+from giskard.ml_worker.generated.ml_worker_pb2 import MLWorkerErrorInfo
 
 MESSAGE_TYPE = Union[Message, Iterable[Message]]
 
@@ -22,36 +21,39 @@ logger = logging.getLogger(__name__)
 
 class ErrorInterceptor(grpc.aio.ServerInterceptor):
     @staticmethod
-    def terminate_with_exception(error_code: StatusCode, e: Exception, context: ServicerContext):
+    async def terminate_with_exception(error_code: StatusCode, e: Exception, context: ServicerContext):
         detail = any_pb2.Any()
         detail.Pack(
-            DebugInfo(
-                stack_entries=traceback.format_stack(),
-                detail=str(e),
+            MLWorkerErrorInfo(
+                stack=traceback.format_exc(),
+                error=str(e),
             )
         )
         code, _ = error_code.value
         rich_status = Status(code=code, message=e.__class__.__name__, details=[detail])
-        context.abort_with_status(rpc_status.to_status(rich_status))
+        await context.abort_with_status(rpc_status.to_status(rich_status))
 
-    @staticmethod
-    def _wrapper(
-        behavior: Callable[[MESSAGE_TYPE, ServicerContext], MESSAGE_TYPE]
-    ) -> Callable[[MESSAGE_TYPE, ServicerContext], Message]:
-        @functools.wraps(behavior)
-        def wrapper(request: MESSAGE_TYPE, context: ServicerContext) -> MESSAGE_TYPE:
-            try:
-                return behavior(request, context)
-            except CodedError as e:
-                logger.exception(e)
-                ErrorInterceptor.terminate_with_exception(e.code, e, context)
-            except Exception as e:
-                logger.exception(e)
-                ErrorInterceptor.terminate_with_exception(StatusCode.INTERNAL, e, context)
+    async def intercept_service(self, continuation: Callable[[grpc.HandlerCallDetails],
+                                                             Awaitable[grpc.RpcMethodHandler]],
+                                handler_call_details: grpc.HandlerCallDetails) -> grpc.RpcMethodHandler:
+        def _wrapper(behavior):
+            @functools.wraps(behavior)
+            async def wrapper(request, context: aio.ServicerContext):
+                try:
+                    res = behavior(request, context)
+                    return res
+                except CodedError as e:
+                    logger.exception(e)
+                    await ErrorInterceptor.terminate_with_exception(e.code, e, context)
+                except Exception as e:
+                    logger.exception(e)
+                    await ErrorInterceptor.terminate_with_exception(StatusCode.INTERNAL, e, context)
 
-        return wrapper
+            return wrapper
 
-    async def intercept_service(self, continuation, handler_call_details):
-        return wrap_server_method_handler(
-            ErrorInterceptor._wrapper, continuation(handler_call_details)
-        )
+        handler = await continuation(handler_call_details)
+        if handler and (handler.request_streaming or
+                        handler.response_streaming):
+            return handler
+
+        return wrap_server_method_handler(_wrapper, handler)

@@ -2,7 +2,6 @@ import pytest
 
 from giskard.ml_worker.testing.functions import GiskardTestFunctions
 
-
 @pytest.mark.parametrize(
     "data,model,label,threshold,expected_metric,actual_slices_size",
     [
@@ -11,12 +10,12 @@ from giskard.ml_worker.testing.functions import GiskardTestFunctions
         ("enron_data", "enron_model", 0, 0.1, 0.32, 25),
     ],
 )
-def test_heuristic(data, model, threshold, label, expected_metric, actual_slices_size, request):
+def test_statistical(data, model, threshold, label, expected_metric, actual_slices_size, request):
     tests = GiskardTestFunctions()
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
 
-    results = tests.heuristic.test_right_label(
+    results = tests.statistical.test_right_label(
         actual_slice=data.slice(lambda df: df.head(len(df) // 2)),
         model=model,
         classification_label=model.classification_labels[label],
@@ -36,14 +35,14 @@ def test_heuristic(data, model, threshold, label, expected_metric, actual_slices
         ("enron_data", "enron_model", 0, 0.01, 0.1, 10),
     ],
 )
-def test_heuristic_filtered(
+def test_statistical_filtered(
     data, model, threshold, label, expected_metric, actual_slices_size, request
 ):
     tests = GiskardTestFunctions()
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
 
-    results = tests.heuristic.test_right_label(
+    results = tests.statistical.test_right_label(
         actual_slice=data.slice(lambda df: df.head(10)),
         model=model,
         classification_label=model.classification_labels[label],
@@ -69,7 +68,7 @@ def test_output_in_range_clf(
     tests = GiskardTestFunctions()
     data = request.getfixturevalue(data)
     model = request.getfixturevalue(model)
-    results = tests.heuristic.test_output_in_range(
+    results = tests.statistical.test_output_in_range(
         actual_slice=data.slice(lambda df: df.head(len(df) // 2)),
         model=model,
         classification_label=model.classification_labels[label],
@@ -90,7 +89,7 @@ def test_output_in_range_clf(
 def test_output_in_range_reg(data, model, threshold, expected_metric, actual_slices_size, request):
     tests = GiskardTestFunctions()
     data = request.getfixturevalue(data)
-    results = tests.heuristic.test_output_in_range(
+    results = tests.statistical.test_output_in_range(
         actual_slice=data.slice(lambda df: df.head(len(df) // 2)),
         model=request.getfixturevalue(model),
         min_range=100,
@@ -101,3 +100,14 @@ def test_output_in_range_reg(data, model, threshold, expected_metric, actual_sli
     assert results.actual_slices_size[0] == actual_slices_size
     assert round(results.metric, 2) == expected_metric
     assert results.passed
+
+def test_disparate_impact(german_credit_data, german_credit_model):
+    tests = GiskardTestFunctions()
+    results = tests.statistical.test_disparate_impact(
+        gsk_dataset=german_credit_data,
+        protected_slice=lambda df: df[df.sex == "female"],
+        unprotected_slice=lambda df: df[df.sex == "male"],
+        model=german_credit_model,
+        positive_outcome="Default"
+    )
+    assert not results.passed, f"DI = {results.metric}"

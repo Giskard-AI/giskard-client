@@ -116,19 +116,35 @@ class GiskardProject:
         res = self._session.get(f"testing/suites/{self.project_id}").json()
         return [{"id": t["id"], "name": t["name"]} for t in res]
 
+    def _execution_dto_filter(self, answer_json):
+        res = {
+            "id": answer_json['testId'],
+            "name": answer_json['testName'],
+            "status": answer_json['status'],
+
+            "executionDate": answer_json['executionDate'],
+            "message": answer_json['message']
+        }
+        if answer_json['status'] != 'ERROR':
+            res["metric"] = answer_json['result'][0]['result']['metric']
+        return res
+
     def execute_test(self, test_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
         assert test_id is not None, "test_id should be specified"
         self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_id=test_id
         )
-        return self._session.post(f"testing/tests/{test_id}/run").json()
+        answer_json = self._session.post(f"testing/tests/{test_id}/run").json()
+        return self._execution_dto_filter(answer_json)
+
 
     def execute_test_suite(self, test_suite_id, actual_ds_id=None, reference_ds_id=None, model_id=None):
         assert test_suite_id is not None, "test_suite_id should be specified"
         self._update_test_suite_params(
             actual_ds_id, reference_ds_id, model_id, test_suite_id=test_suite_id,
         )
-        return self._session.post(f"testing/suites/execute", json={"suiteId": test_suite_id}).json()
+        answer_json =  self._session.post(f"testing/suites/execute", json={"suiteId": test_suite_id}).json()
+        return [self._execution_dto_filter(test) for test in answer_json]
 
     def _post_model(
             self,
@@ -169,10 +185,12 @@ class GiskardProject:
                 "classificationLabels": anonymize(classification_labels),
             },
         )
+
+        model_id = model_res.json().get('id')
         print(
-            f"Model successfully uploaded to project key '{self.project_key}' and is available at {self.url} "
+            f"Model successfully uploaded to project key '{self.project_key}' with ID = {model_id}. It is available at {self.url} "
         )
-        return model_res.json().get('id')
+        return model_id
 
     def _validate_model(
             self,
@@ -270,8 +288,9 @@ class GiskardProject:
         }
         files = [("metadata", (None, json.dumps(params), "application/json")), ("file", data)]
         result = self._session.post("project/data/upload", data={}, files=files)
+        ds_id = result.json().get('id')
         print(
-            f"Dataset successfully uploaded to project key '{self.project_key}' and is available at {self.url} "
+            f"Dataset successfully uploaded to project key '{self.project_key}' with ID = {ds_id}. It is available at {self.url} "
         )
         self.analytics.track(
             "Upload dataset",
@@ -282,7 +301,7 @@ class GiskardProject:
                 "target": anonymize(target),
             },
         )
-        return result.json().get('id')
+        return ds_id
 
     def _validate_and_compress_data(self, column_types, df, target):
         self._validate_is_pandasdataframe(df)
