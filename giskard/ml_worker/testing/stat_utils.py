@@ -37,14 +37,10 @@ def equivalence_t_test(population_1, population_2, window_size, critical_quantil
     population_2_up = population_2 + window_size/2.
     population_2_low = population_2 - window_size/2.
 
-    if np.array_equal(population_1, population_2_up):
-        p_value_up = 0.
+    if np.array_equal(population_1, population_2):
+        p_value_low, p_value_up = 0., 0.
     else:
         p_value_up = stats.ttest_rel(population_1, population_2_up, alternative="less")[1]
-
-    if np.array_equal(population_1, population_2_low):
-        p_value_low = 0.
-    else:
         p_value_low = stats.ttest_rel(population_1, population_2_low, alternative="greater")[1]
 
     test_up = p_value_up < critical_quantile
@@ -96,14 +92,10 @@ def equivalence_wilcoxon(population_1, population_2, window_size, critical_quant
     population_2_up = population_2 + window_size/2.
     population_2_low = population_2 - window_size/2.
 
-    if np.array_equal(population_1, population_2_up):
-        p_value_up = 0.
+    if np.array_equal(population_1, population_2):
+        p_value_low, p_value_up = 0., 0.
     else:
         p_value_up = stats.wilcoxon(population_1, population_2_up, alternative="less")[1]
-
-    if np.array_equal(population_1, population_2_low):
-        p_value_low = 0.
-    else:
         p_value_low = stats.wilcoxon(population_1, population_2_low, alternative="greater")[1]
 
     test_up = p_value_up < critical_quantile
