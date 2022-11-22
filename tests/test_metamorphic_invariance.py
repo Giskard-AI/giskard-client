@@ -163,3 +163,14 @@ def test_metamorphic_invariance_wilcoxon(german_credit_test_data, german_credit_
 
     assert results.actual_slices_size[0] == len(german_credit_test_data)
     assert results.passed, f"metric = {results.metric}"
+
+def test_metamorphic_invariance_wilcoxon_nopert(german_credit_test_data, german_credit_model):
+    perturbation = {}
+    tests = GiskardTestFunctions()
+    results = tests.metamorphic.test_metamorphic_invariance_wilcoxon(df=german_credit_test_data,
+                                                                     model=german_credit_model,
+                                                                     perturbation_dict=perturbation,
+                                                                     window_size=0.2, critical_quantile=0.05)
+
+    assert results.actual_slices_size[0] == len(german_credit_test_data)
+    assert results.passed, f"metric = {results.metric}"
