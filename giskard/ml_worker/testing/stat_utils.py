@@ -18,12 +18,9 @@ def paired_t_test(population_1, population_2, alternative, critical_quantile):
     if np.array_equal(population_1, population_2):
         p_value = 1.
     else:
-        stat, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
+        _, p_value = stats.ttest_rel(population_1, population_2, alternative=alternative)
 
-    if p_value > critical_quantile:
-        return False, p_value
-    else:
-        return True, p_value
+    return p_value <= critical_quantile, p_value
 
 def equivalence_t_test(population_1, population_2, window_size, critical_quantile):
     """
@@ -79,12 +76,9 @@ def paired_wilcoxon(population_1, population_2, alternative, critical_quantile):
     if np.array_equal(population_1, population_2):
         p_value = 1.
     else:
-        stat, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
+        _, p_value = stats.wilcoxon(population_1, population_2, alternative=alternative)
 
-    if p_value > critical_quantile:
-        return False, p_value
-    else:
-        return True, p_value
+    return p_value <= critical_quantile, p_value
 
 
 def equivalence_wilcoxon(population_1, population_2, window_size, critical_quantile):
