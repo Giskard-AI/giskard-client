@@ -87,6 +87,10 @@ class GiskardModel:
             if column_types:
                 column_types = {k: v for k, v in column_types.items() if k in self.feature_names}
 
+        for cname, ctype in column_types.items():
+            if cname not in df:
+                df[cname] = None
+
         if column_types:
             df = self.cast_column_to_types(df, column_types)
         return df
