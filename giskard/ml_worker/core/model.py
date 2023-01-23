@@ -71,6 +71,12 @@ class GiskardModel:
     def prepare_dataframe(self, dataset):
         df = dataset.df.copy()
         column_types = dict(dataset.column_types) if dataset.column_types else None
+
+        if column_types:
+            for cname, ctype in column_types.items():
+                if cname not in df:
+                    df[cname] = None
+
         if dataset.target:
             if dataset.target in df.columns:
                 df.drop(dataset.target, axis=1, inplace=True)
@@ -87,10 +93,6 @@ class GiskardModel:
             if column_types:
                 column_types = {k: v for k, v in column_types.items() if k in self.feature_names}
 
-        if column_types:
-            for cname, ctype in column_types.items():
-                if cname not in df:
-                    df[cname] = None
 
         if column_types:
             df = self.cast_column_to_types(df, column_types)
