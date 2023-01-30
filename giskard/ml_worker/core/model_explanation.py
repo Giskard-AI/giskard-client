@@ -18,21 +18,17 @@ logger = logging.getLogger(__name__)
 @timer()
 def explain(model: GiskardModel, dataset: GiskardDataset, input_data: Dict):
     def prepare_df(df):
-        return model.prepare_dataframe(
-            GiskardDataset(
-                df=df,
-                target=dataset.target,
-                feature_types=dataset.feature_types,
-                column_types=dataset.column_types,
-            )
-        )
+        prepared_df = model.prepare_dataframe(
+            GiskardDataset(df=df, target=dataset.target, feature_types=dataset.feature_types,
+                           column_types=dataset.column_types, ))
+        columns_in_original_order = [c for c in dataset.df.columns if c in prepared_df.columns]
+        # Make sure column order is the same as in df
+        return prepared_df[columns_in_original_order]
 
     df = model.prepare_dataframe(dataset)
     feature_names = list(df.columns)
 
-    # Make sure column order is that column order is the same as in df
-    input_df = pd.DataFrame([input_data])
-    input_df = prepare_df(input_df)
+    input_df = prepare_df(pd.DataFrame([input_data]))
 
     def predict_array(array):
         return model.prediction_function(prepare_df(pd.DataFrame(array, columns=list(df.columns))))
